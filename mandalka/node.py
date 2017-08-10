@@ -24,63 +24,74 @@ import hashlib
 
 def node(cls):
     class Node(object):
-        _cache_dir = _getenv("MANDALKA_CACHE", "./__saved__")
+        _cache_dir = _get_env("MANDALKA_CACHE", "./__saved__")
 
         def __init__(self, *args, **kwargs):
-            self.args = args
-            self.kwargs = kwargs
-            self.node_id = _hash(_describe_call(cls, *args, **kwargs))
-            self.value = None
-
-        def _mandalka_compute_node(self):
-            if self.value is not None:
-                return
-            save_name = cls.__name__.lower() + "_" + self.node_id
-            save_path = Node._cache_dir + "/" + save_name
-
-            # Tell the object to load itself from cache
-            if os.path.exists(save_path + "/node-info.txt"):
-                obj = cls.__new__(cls)
-                obj.__load__(save_path)
-                self.value = obj
-                return
-
-            # Create an actual new instance
-            info = _describe_call(cls, *self.args, **self.kwargs)
-            obj = cls(*self.args, **self.kwargs)
-            self.args, self.kwargs = None, None
-
-            # Tell it to save data to cache
-            os.makedirs(save_path)
-            try:
-                obj.__save__(save_path)
-                with open(save_path + "/node-info.txt", "w") as f:
-                    f.write(info + "\n")
-            finally:
-                _rmdir_if_empty(save_path)
-            self.value = obj
-
-            # Save node descriptions
-            with open(Node._cache_dir + "/graph.txt", "a") as f:
-                f.write(self.node_id + "\t" + info + "\n")
+            call = _describe(cls, *args, **kwargs)
+            self._mandalka_params = {
+                "args": args,
+                "kwargs": kwargs,
+                "call": call,
+                "nodeid": _hash(call),
+            }
 
         def __str__(self):
-            return "<" + cls.__name__ + " " + self.node_id + ">"
+            params = object.__getattribute__(self, "_mandalka_params")
+            return "<" + cls.__name__ + " " + params["nodeid"] + ">"
 
         def __repr__(self):
-            return "<" + cls.__name__ + " " + self.node_id + ">"
+            params = object.__getattribute__(self, "_mandalka_params")
+            return "<" + cls.__name__ + " " + params["nodeid"] + ">"
 
-        def __getattr__(self, name):
-            self._mandalka_compute_node()
-            return getattr(self.value, name)
+        def __getattribute__(self, name):
+            params = object.__getattribute__(self, "_mandalka_params")
+
+            if "obj" not in params:
+                params["obj"] = _compute_node(
+                    cls = cls,
+                    cache_dir = Node._cache_dir,
+                    **params
+                )
+                del params["args"], params["kwargs"]
+
+            if len(name) >= 1:
+                return getattr(params["obj"], name)
 
     return Node
+
+def _compute_node(cls, cache_dir, args, kwargs, call, nodeid):
+    nodeid = cls.__name__.lower() + "_" + nodeid
+    save_path = cache_dir + "/" + nodeid
+
+    # Tell the object to load itself from cache
+    if os.path.exists(save_path + "/node-info.txt"):
+        obj = cls.__new__(cls)
+        obj.__load__(save_path)
+        return obj
+
+    # Or create an actual new instance
+    obj = cls(*args, **kwargs)
+
+    # And then save it to cache
+    try:
+        os.makedirs(save_path)
+        obj.__save__(save_path)
+        with open(save_path + "/node-info.txt", "w") as f:
+            f.write(call + "\n")
+    finally:
+        _rmdir_if_empty(save_path)
+
+    # Save node descriptions
+    with open(cache_dir + "/graph.txt", "a") as f:
+        f.write(nodeid + "\t" + call + "\n")
+
+    return obj
 
 def _hash(s):
     h = hashlib.sha256(bytes(s, "UTF-8"))
     return h.digest()[0:8].hex()
 
-def _describe_call(obj, *args, **kwargs):
+def _describe(obj, *args, **kwargs):
     args_str = list(map(repr, args))
     for k in sorted(kwargs):
         args_str.append(str(k) + "=" + repr(kwargs[k]))
@@ -92,7 +103,7 @@ def _rmdir_if_empty(path):
     except:
         pass
 
-def _getenv(name, default = None):
+def _get_env(name, default = None):
     if name in os.environ and len(os.environ[name]) >= 1:
         return os.environ[name]
     return default

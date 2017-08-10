@@ -21,12 +21,22 @@
 
 import threading
 
+def touch(o):
+    try:
+        getattr(o, "")
+    except:
+        pass
+
 def threads(*args):
-    if len(args) == 1 and isinstance(args[0], list):
-        args = args[0]
+    if len(args) == 1:
+        try:
+            args[0].__iter__
+            args = args[0]
+        except AttributeError:
+            pass
 
     threads = [
-        threading.Thread(target = o._mandalka_compute_node)
+        threading.Thread(target = touch, args = (o,))
         for o in args
     ]
     [t.start() for t in threads]
