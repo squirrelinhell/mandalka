@@ -19,5 +19,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from mandalka.node import node
-from mandalka.threads import threads
+import threading
+
+def threads(*args):
+    if len(args) == 1 and isinstance(args[0], list):
+        args = args[0]
+
+    threads = [
+        threading.Thread(target = o._mandalka_compute_node)
+        for o in args
+    ]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    return args

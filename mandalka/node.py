@@ -20,7 +20,6 @@
 # SOFTWARE.
 
 import os
-import inspect
 import hashlib
 
 def node(cls):
@@ -30,18 +29,19 @@ def node(cls):
         def __init__(self, *args, **kwargs):
             self.args = args
             self.kwargs = kwargs
-            self.node_id = _node_id(cls, *args, **kwargs)
+            self.node_id = _hash(_describe_call(cls, *args, **kwargs))
             self.value = None
 
-        def __compute(self):
+        def _mandalka_compute_node(self):
             if self.value is not None:
                 return
-            savedir = Node._cache_dir + "/" + self.node_id
+            save_name = cls.__name__.lower() + "_" + self.node_id
+            save_path = Node._cache_dir + "/" + save_name
 
             # Tell the object to load itself from cache
-            if os.path.exists(savedir + "/node-info.txt"):
+            if os.path.exists(save_path + "/node-info.txt"):
                 obj = cls.__new__(cls)
-                obj.__load__(savedir)
+                obj.__load__(save_path)
                 self.value = obj
                 return
 
@@ -51,13 +51,13 @@ def node(cls):
             self.args, self.kwargs = None, None
 
             # Tell it to save data to cache
-            os.makedirs(savedir)
+            os.makedirs(save_path)
             try:
-                obj.__save__(savedir)
-                with open(savedir + "/node-info.txt", "w") as f:
+                obj.__save__(save_path)
+                with open(save_path + "/node-info.txt", "w") as f:
                     f.write(info + "\n")
             finally:
-                _rmdir_if_empty(savedir)
+                _rmdir_if_empty(save_path)
             self.value = obj
 
             # Save node descriptions
@@ -71,20 +71,14 @@ def node(cls):
             return "<" + cls.__name__ + " " + self.node_id + ">"
 
         def __getattr__(self, name):
-            self.__compute()
+            self._mandalka_compute_node()
             return getattr(self.value, name)
 
     return Node
 
-def _node_id(cls, *args, **kwargs):
-    name = _describe_call(cls, *args, **kwargs)
-    try:
-        name += "\n" + inspect.getsource(cls)
-    except:
-        pass
-
-    h = hashlib.sha256(bytes(name, "UTF-8")).digest()
-    return h[0:8].hex()
+def _hash(s):
+    h = hashlib.sha256(bytes(s, "UTF-8"))
+    return h.digest()[0:8].hex()
 
 def _describe_call(obj, *args, **kwargs):
     args_str = list(map(repr, args))
