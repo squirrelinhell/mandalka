@@ -25,42 +25,72 @@ import hashlib
 
 def node(cls):
     class Node(object):
-        _cache_dir = _getenv("MANDALKA_CACHE", "./__mandalka__")
+        _cache_dir = _getenv("MANDALKA_CACHE", "./__saved__")
 
-        def __init__(self, *args):
-            self.nodeid = (
-                _class_id(cls) + "(" + ",".join(map(str, args)) + ")"
-            )
-            savedir = Node._cache_dir + "/" + self.nodeid
-            if os.path.exists(savedir):
-                self.o = cls.__new__(cls)
-                self.o.__load__(savedir)
-            else:
-                self.o = cls(*args)
-                os.makedirs(savedir)
-                try:
-                    self.o.__save__(savedir)
-                finally:
-                    _rmdir_if_empty(savedir)
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+            self.node_id = _node_id(cls, *args, **kwargs)
+            self.value = None
+
+        def __compute(self):
+            if self.value is not None:
+                return
+            savedir = Node._cache_dir + "/" + self.node_id
+
+            # Tell the object to load itself from cache
+            if os.path.exists(savedir + "/node-info.txt"):
+                obj = cls.__new__(cls)
+                obj.__load__(savedir)
+                self.value = obj
+                return
+
+            # Create an actual new instance
+            info = _describe_call(cls, *self.args, **self.kwargs)
+            obj = cls(*self.args, **self.kwargs)
+            self.args, self.kwargs = None, None
+
+            # Tell it to save data to cache
+            os.makedirs(savedir)
+            try:
+                obj.__save__(savedir)
+                with open(savedir + "/node-info.txt", "w") as f:
+                    f.write(info + "\n")
+            finally:
+                _rmdir_if_empty(savedir)
+            self.value = obj
+
+            # Save node descriptions
+            with open(Node._cache_dir + "/graph.txt", "a") as f:
+                f.write(self.node_id + "\t" + info + "\n")
 
         def __str__(self):
-            return self.nodeid
+            return "<" + cls.__name__ + " " + self.node_id + ">"
 
         def __repr__(self):
-            return self.nodeid
+            return "<" + cls.__name__ + " " + self.node_id + ">"
 
         def __getattr__(self, name):
-            return getattr(self.o, name)
+            self.__compute()
+            return getattr(self.value, name)
 
     return Node
 
-def _class_id(cls):
+def _node_id(cls, *args, **kwargs):
+    name = _describe_call(cls, *args, **kwargs)
     try:
-        src = inspect.getsource(cls)
-        h = hashlib.sha256(bytes(src, "UTF-8")).digest()
-        return cls.__name__ + "_" + h[0:4].hex()
+        name += "\n" + inspect.getsource(cls)
     except:
-        return cls.__name__
+        pass
+
+    h = hashlib.sha256(bytes(name, "UTF-8")).digest()
+    return h[0:8].hex()
+
+def _describe_call(obj, *args, **kwargs):
+    args_str = list(map(repr, args))
+    for k in sorted(kwargs):
+        args_str.append(str(k) + "=" + repr(kwargs[k]))
+    return obj.__name__ + "(" + ", ".join(args_str) + ")"
 
 def _rmdir_if_empty(path):
     try:
