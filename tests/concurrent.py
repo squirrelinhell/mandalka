@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 # Copyright (c) 2017 SquirrelInHell
 #
@@ -21,61 +20,34 @@
 # SOFTWARE.
 
 import time
+import mandalka
 import numpy as np
 
-import mandalka
-import debug
-
 @mandalka.node
-class Dataset():
+class Squares():
+    waiting = 0
+
     def __init__(self, start, end):
         if end - start <= 1:
-            print("Computing dataset: [%s]..." % start)
-            self.x = np.array([start])
-            time.sleep(1)
-            self.y = self.x * self.x
-            print("Finished computing dataset: [%s]" % start)
+            # Wait until all threads get here
+            Squares.waiting += 1
+            while Squares.waiting < 4:
+                time.sleep(0.01)
+
+            self.x = np.array([start * start])
         else:
             half = start + (end - start) // 2
             a, b = mandalka.threads(
-                Dataset(start, half),
-                Dataset(half, end),
+                Squares(start, half),
+                Squares(half, end),
             )
             self.x = np.concatenate((a.x, b.x))
-            self.y = np.concatenate((a.y, b.y))
-
-    def get_x(self):
-        return self.x
-
-    def get_y(self):
-        return self.y
 
     def __load__(self, path):
-        data = np.load(path + "/data.npz")
-        self.x = data["x"]
-        self.y = data["y"]
-        print("Loaded dataset: %s" % self.x)
+        self.x = np.load(path + "/x.npy") * 2
 
     def __save__(self, path):
-        np.savez(path + "/data.npz", x=self.x, y=self.y)
+        np.save(path + "/x.npy", self.x)
 
-@mandalka.node
-class Model():
-    def __init__(self, dataset):
-        self.weights = dataset.get_y()
-        print("Computed model: %s" % self.weights)
-
-    def get_weights(self):
-        return self.weights
-
-    def __load__(self, path):
-        data = np.load(path + "/data.npz")
-        self.weights = data["w"]
-        print("Loaded model: %s" % self.weights)
-
-    def __save__(self, path):
-        np.savez(path + "/data.npz", w = self.weights)
-
-Model(Dataset(0, 4)).get_weights()
-Model(Dataset(0, 5)).get_weights()
-Model(Dataset(0, 4)).get_weights()
+assert (Squares(0, 4).x == [0, 1, 4, 9]).all()
+assert (Squares(0, 4).x == [0, 2, 8, 18]).all()

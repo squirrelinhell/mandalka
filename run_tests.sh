@@ -1,3 +1,4 @@
+#!/bin/bash
 
 # Copyright (c) 2017 SquirrelInHell
 #
@@ -19,18 +20,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-import sys
+TMPDIR=$(mktemp -d) || exit 1
+trap "rm -rf $TMPDIR" EXIT
 
-def print_err(_1, err, _2):
-    info = "[Note: set the environment variable DEBUG to see details]\n"
-    err = str(err)
-    err = "Unknown" if err == "" else err
-    sys.stderr.write("Error: " + err + "\n" + info)
-    sys.stderr.flush()
+export PYTHONPATH="$(pwd):$PYTHONPATH"
 
-if "DEBUG" in os.environ and os.environ["DEBUG"] not in ["", "no"]:
-    import IPython.core.ultratb
-    sys.excepthook = IPython.core.ultratb.FormattedTB(call_pdb=True)
-else:
-    sys.excepthook = print_err
+ID=1
+while read test 0<&3; do
+    echo "Test: $test..."
+    mkdir "$TMPDIR/$ID" || exit 1
+
+    {
+        echo "import debug"
+        cat "tests/$test"
+    } > "$TMPDIR/$ID/$test" || exit 1
+
+    if ! (cd "$TMPDIR/$ID" && python3 "./$test"); then
+        echo
+        echo "TEST FAILED: $test"
+        echo
+        exit 1
+    fi
+
+    rm -rf "$TMPDIR/$ID" || true
+    let ID=ID+1
+done 3<<<"$(ls tests)"

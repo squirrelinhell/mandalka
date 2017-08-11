@@ -23,17 +23,16 @@ import os
 import hashlib
 
 def node(cls):
-    class Node(object):
-        _cache_dir = _get_env("MANDALKA_CACHE", "./__saved__")
+    cache_dir = _get_env("MANDALKA_CACHE", "./__saved__")
 
+    class _class_wrapper(cls):
         def __init__(self, *args, **kwargs):
-            call = _describe(cls, *args, **kwargs)
-            self._mandalka_params = {
-                "args": args,
-                "kwargs": kwargs,
-                "call": call,
-                "nodeid": _hash(call),
-            }
+            params = {}
+            params["args"] = args
+            params["kwargs"] = kwargs
+            params["call"] = _describe(cls, *args, **kwargs)
+            params["nodeid"] = _hash(params["call"])
+            object.__setattr__(self, "_mandalka_params", params)
 
         def __str__(self):
             params = object.__getattribute__(self, "_mandalka_params")
@@ -43,13 +42,16 @@ def node(cls):
             params = object.__getattribute__(self, "_mandalka_params")
             return "<" + cls.__name__ + " " + params["nodeid"] + ">"
 
+        def __setattr__(self, name, value):
+            pass
+
         def __getattribute__(self, name):
             params = object.__getattribute__(self, "_mandalka_params")
 
             if "obj" not in params:
                 params["obj"] = _compute_node(
                     cls = cls,
-                    cache_dir = Node._cache_dir,
+                    cache_dir = cache_dir,
                     **params
                 )
                 del params["args"], params["kwargs"]
@@ -57,7 +59,7 @@ def node(cls):
             if len(name) >= 1:
                 return getattr(params["obj"], name)
 
-    return Node
+    return _class_wrapper
 
 def _compute_node(cls, cache_dir, args, kwargs, call, nodeid):
     nodeid = cls.__name__.lower() + "_" + nodeid
@@ -88,7 +90,7 @@ def _compute_node(cls, cache_dir, args, kwargs, call, nodeid):
     return obj
 
 def _hash(s):
-    h = hashlib.sha256(bytes(s, "UTF-8"))
+    h = hashlib.sha256(bytes("mandalka:" + s, "UTF-8"))
     return h.digest()[0:8].hex()
 
 def _describe(obj, *args, **kwargs):
