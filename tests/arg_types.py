@@ -19,5 +19,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from mandalka.node import node, is_node, evaluate, describe
-from mandalka.threads import threads
+from mandalka import node, is_node, describe
+
+def fails(f):
+    try:
+        f()
+        return False
+    except:
+        return True
+
+@node(save=False)
+class Node():
+    def __init__(self, a=None, b=None):
+        pass
+
+class NotANode():
+    def __init__(self, a=None, b=None):
+        pass
+
+assert is_node(Node())
+assert not is_node(NotANode())
+
+assert fails(lambda: Node(NotANode(1, 2), 3))
+assert not fails(lambda: NotANode(Node(1, 2), 3))
+
+assert fails(lambda: Node(Node(NotANode(1, 2), 3)))
+assert not fails(lambda: Node(Node(Node(3, 4), Node(3))))
+
+assert fails(lambda: Node(10.0))
+assert not fails(lambda: Node(10))
+
+assert describe(Node(123, b=[])) == "Node(123, b=[])"
+assert describe(Node(a=["a", b"b"])) == "Node(a=['a', b'b'])"
+assert describe(Node({1:2,"a":["b"]})) == "Node({1: 2, 'a': ['b']})"

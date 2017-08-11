@@ -19,5 +19,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from mandalka.node import node, is_node, evaluate, describe
-from mandalka.threads import threads
+import mandalka
+
+@mandalka.node(save=False)
+class Foo():
+    def set_a(self, value):
+        self.a = value
+
+foo = Foo()
+assert str(foo) == "<Foo 18fc9a9bb4ef830a>"
+
+foo.a = 10
+assert foo.a == 10
+
+foo._mandalka_params = 20
+assert foo._mandalka_params == 20
+
+foo.set_a(30)
+assert foo.a == 30
+
+assert str(foo) == "<Foo 18fc9a9bb4ef830a>"

@@ -20,12 +20,7 @@
 # SOFTWARE.
 
 import threading
-
-def touch(o):
-    try:
-        getattr(o, "")
-    except:
-        pass
+import mandalka
 
 def threads(*args):
     if len(args) == 1:
@@ -36,7 +31,7 @@ def threads(*args):
             pass
 
     threads = [
-        threading.Thread(target = touch, args = (o,))
+        threading.Thread(target = mandalka.evaluate, args = (o,))
         for o in args
     ]
     [t.start() for t in threads]
