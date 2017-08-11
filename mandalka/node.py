@@ -117,6 +117,11 @@ def _describe_arg(obj):
         return repr(obj)
     if isinstance(obj, list):
         return "[" + ", ".join(map(_describe_arg, obj)) + "]"
+    if isinstance(obj, tuple):
+        if len(obj) == 1:
+            return "(" + _describe_arg(obj[0]) + ",)"
+        else:
+            return "(" + ", ".join(map(_describe_arg, obj)) + ")"
     if isinstance(obj, dict):
         return "{" + ", ".join([
             _describe_arg(k) + ": " + _describe_arg(v)

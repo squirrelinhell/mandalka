@@ -51,4 +51,5 @@ assert not fails(lambda: Node(10))
 
 assert describe(Node(123, b=[])) == "Node(123, b=[])"
 assert describe(Node(a=["a", b"b"])) == "Node(a=['a', b'b'])"
-assert describe(Node({1:2,"a":["b"]})) == "Node({1: 2, 'a': ['b']})"
+assert describe(Node({1: 2, "a": ["b"]})) == "Node({1: 2, 'a': ['b']})"
+assert describe(Node((1,), (1, 2))) == "Node((1,), (1, 2))"
