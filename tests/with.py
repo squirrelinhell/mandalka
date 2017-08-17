@@ -1,4 +1,3 @@
-#!/bin/bash
 
 # Copyright (c) 2017 SquirrelInHell
 #
@@ -20,33 +19,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-TMPDIR=$(mktemp -d) || exit 1
-trap "rm -rf $TMPDIR" EXIT
+import mandalka
 
-export PYTHONPATH="$(pwd):$PYTHONPATH"
+@mandalka.node(save=False)
+class Resource():
+    v = 0
+    def __init__(self, n):
+        Resource.v = n
+    def __enter__(self):
+        Resource.v += 1
+    def __exit__(self, type, value, traceback):
+        Resource.v -= 1
 
-TESTS="$@"
-if [ "x$TESTS" = x ]; then
-    TESTS=$(ls tests)
-fi
+assert Resource.v == 0
 
-ID=1
-while read test 0<&3; do
-    echo "Test: $test..."
-    mkdir "$TMPDIR/$ID" || exit 1
+with Resource(10) as r:
+    assert Resource.v == 11
 
-    {
-        echo "import debug"
-        cat "tests/$test"
-    } > "$TMPDIR/$ID/$test" || exit 1
-
-    if ! (cd "$TMPDIR/$ID" && python3 "./$test"); then
-        echo
-        echo "TEST FAILED: $test"
-        echo
-        exit 1
-    fi
-
-    rm -rf "$TMPDIR/$ID" || true
-    let ID=ID+1
-done 3<<<"$TESTS"
+assert Resource.v == 10

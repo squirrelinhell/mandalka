@@ -54,6 +54,12 @@ def _wrap_class(cls, save=True):
             params = object.__getattribute__(self, "_mandalka_params")
             return "<" + cls.__name__ + " " + params["nodeid"] + ">"
 
+        def __enter__(self, *args, **kwargs):
+            return evaluate(self).__enter__(*args, **kwargs)
+
+        def __exit__(self, *args, **kwargs):
+            return evaluate(self).__exit__(*args, **kwargs)
+
         def __setattr__(self, name, value):
             return setattr(evaluate(self), name, value)
 

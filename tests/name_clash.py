@@ -31,9 +31,11 @@ assert str(foo) == "<Foo 18fc9a9bb4ef830a>"
 
 foo.a = 10
 assert foo.a == 10
+assert sorted(list(foo.__dict__)) == ["a"]
 
 foo._mandalka_params = 20
 assert foo._mandalka_params == 20
+assert sorted(list(foo.__dict__)) == ["_mandalka_params", "a"]
 
 foo.set_a(30)
 assert foo.a == 30

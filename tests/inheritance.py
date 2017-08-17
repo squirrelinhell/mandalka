@@ -1,4 +1,3 @@
-#!/bin/bash
 
 # Copyright (c) 2017 SquirrelInHell
 #
@@ -20,33 +19,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-TMPDIR=$(mktemp -d) || exit 1
-trap "rm -rf $TMPDIR" EXIT
+import mandalka
 
-export PYTHONPATH="$(pwd):$PYTHONPATH"
+class Foo():
+    def __init__(self):
+        self.x = 1
+    def calculate(self, value):
+        return value * 10
 
-TESTS="$@"
-if [ "x$TESTS" = x ]; then
-    TESTS=$(ls tests)
-fi
+@mandalka.node(save=False)
+class Goo(Foo):
+    def __init__(self):
+        super().__init__()
+        self.x += 2
+    def test(self):
+        return self.calculate(self.x)
 
-ID=1
-while read test 0<&3; do
-    echo "Test: $test..."
-    mkdir "$TMPDIR/$ID" || exit 1
-
-    {
-        echo "import debug"
-        cat "tests/$test"
-    } > "$TMPDIR/$ID/$test" || exit 1
-
-    if ! (cd "$TMPDIR/$ID" && python3 "./$test"); then
-        echo
-        echo "TEST FAILED: $test"
-        echo
-        exit 1
-    fi
-
-    rm -rf "$TMPDIR/$ID" || true
-    let ID=ID+1
-done 3<<<"$TESTS"
+assert Goo().test() == 30
