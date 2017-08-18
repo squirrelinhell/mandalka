@@ -65,40 +65,38 @@ def node(cls=None, save=True):
             args_str.append(str(k) + "=" + describe_obj(kwargs[k]))
         return obj.__name__ + "(" + ", ".join(args_str) + ")"
 
-    def build_obj(args, kwargs, nodeid, call):
-        nodeid = cls.__name__.lower() + "_" + nodeid
+    def unwrap(node):
+        params = object.__getattribute__(node, "_mandalka_node")
+        if "obj" in params:
+            return params["obj"]
+
+        nodeid = cls.__name__.lower() + "_" + params["nodeid"]
         cache_dir = get_env("MANDALKA_CACHE", "./__saved__")
         save_path = cache_dir + "/" + nodeid
 
-        # Tell the object to load itself from cache
-        if os.path.exists(save_path):
-            obj = cls.__new__(cls)
-            obj.__load__(save_path)
-            return obj
+        params["obj"] = cls.__new__(cls)
 
-        # Or create an actual new instance
-        obj = cls(*args, **kwargs)
+        if os.path.exists(save_path):
+            # Tell the object to load itself from cache
+            del params["args"], params["kwargs"]
+            cls.__load__(node, save_path)
+            return params["obj"]
+
+        # Or to build a new instance
+        try:
+            cls.__init__(node, *params["args"], **params["kwargs"])
+        finally:
+            del params["args"], params["kwargs"]
 
         if save:
             # And then save it to cache
             os.makedirs(save_path + ".save", exist_ok=True)
-            obj.__save__(save_path + ".save")
+            cls.__save__(node, save_path + ".save")
             os.rename(save_path + ".save", save_path)
 
             # Also save the description of this node
             with open(cache_dir + "/graph.txt", "a") as f:
-                f.write(nodeid + "\t" + call + "\n")
-
-        return obj
-
-    def unwrap(node):
-        params = object.__getattribute__(node, "_mandalka_node")
-        if "obj" not in params:
-            params["obj"] = build_obj(
-                params["args"], params["kwargs"],
-                params["nodeid"], params["call"]
-            )
-            del params["args"], params["kwargs"]
+                f.write(nodeid + "\t" + params["call"] + "\n")
 
         return params["obj"]
 
@@ -136,6 +134,11 @@ def node(cls=None, save=True):
             return setattr(unwrap(self), name, value)
 
         def __getattribute__(self, name):
+            if name not in ["_mandalka_node", "__dict__", "__class__"]:
+                try:
+                    return object.__getattribute__(self, name)
+                except AttributeError:
+                    pass
             return getattr(unwrap(self), name)
 
     return wrapper

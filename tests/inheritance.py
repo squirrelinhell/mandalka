@@ -45,9 +45,11 @@ class Parent():
 @mandalka.node(save=False)
 class Child(Parent):
     def __init__(self):
+        assert mandalka.is_node(self)
         super().__init__()
 
     def test(self):
+        assert mandalka.is_node(self)
         self.increase()
         return [self.__class__.a, Child.b, Child.c, self.d]
 
