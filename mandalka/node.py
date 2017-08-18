@@ -100,6 +100,19 @@ def node(cls=None, save=True):
 
         return params["obj"]
 
+    builtins = [
+        "_mandalka_node",
+        "__init__",
+        "__str__",
+        "__repr__",
+        "__enter__",
+        "__exit__",
+        "__setattr__",
+        "__getattribute__",
+        "__dict__",
+        "__class__",
+    ]
+
     class wrapper(cls):
         def __init__(self, *args, **kwargs):
             if type(self) != wrapper:
@@ -131,12 +144,16 @@ def node(cls=None, save=True):
             return cls.__exit__(self, *args, **kwargs)
 
         def __setattr__(self, name, value):
+            if name not in builtins:
+                object.__setattr__(self, name, None)
             return setattr(unwrap(self), name, value)
 
         def __getattribute__(self, name):
-            if name not in ["_mandalka_node", "__dict__", "__class__"]:
+            if name not in builtins:
                 try:
-                    return object.__getattribute__(self, name)
+                    v = object.__getattribute__(self, name)
+                    if v is not None:
+                        return v
                 except AttributeError:
                     pass
             return getattr(unwrap(self), name)

@@ -28,15 +28,28 @@ def fails(f):
     except:
         return True
 
-class Parent():
+class GrandParent():
+    def __init__(self):
+        assert mandalka.is_node(self)
+        self.test_override = lambda: self.override()
+
+    def override(self):
+        assert mandalka.is_node(self)
+        return 1
+
+class Parent(GrandParent):
     a = 10
 
     def __init__(self):
+        assert mandalka.is_node(self)
+        super().__init__()
         Parent.b = 20
         self.__class__.c = 30
         self.d = 40
+        self.override = lambda: 2
 
     def increase(self):
+        assert mandalka.is_node(self)
         Parent.a += 1
         self.__class__.b += 1
         self.__class__.c += 1
@@ -60,5 +73,7 @@ c = Child()
 assert mandalka.is_node(c)
 assert c.test() == [11, 21, 31, 41]
 
-assert not mandalka.is_node(Parent())
+assert c.override() == 2
+assert c.test_override() == 2
+
 assert fails(lambda: GrandChild())
