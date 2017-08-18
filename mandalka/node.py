@@ -104,6 +104,8 @@ def node(cls=None, save=True):
 
     class wrapper(cls):
         def __init__(self, *args, **kwargs):
+            if type(self) != wrapper:
+                raise ValueError("Do not inherit from mandalka nodes")
             params = {}
             params["cls"] = cls
             params["evaluate"] = lambda: unwrap(self)

@@ -21,29 +21,42 @@
 
 import mandalka
 
-class Child():
+def fails(f):
+    try:
+        f()
+        return False
+    except:
+        return True
+
+class Parent():
     a = 10
 
     def __init__(self):
-        Child.b = 20
+        Parent.b = 20
         self.__class__.c = 30
-        self.d = 30
+        self.d = 40
 
     def increase(self):
-        Child.a += 1
+        Parent.a += 1
         self.__class__.b += 1
         self.__class__.c += 1
         self.d += 1
 
 @mandalka.node(save=False)
-class Parent(Child):
+class Child(Parent):
     def __init__(self):
         super().__init__()
 
     def test(self):
         self.increase()
-        return [self.__class__.a, Parent.b, Parent.c, self.d]
+        return [self.__class__.a, Child.b, Child.c, self.d]
 
-p = Parent()
-assert mandalka.is_node(p)
-assert p.test() == [11, 21, 31, 31]
+class GrandChild(Child):
+    pass
+
+c = Child()
+assert mandalka.is_node(c)
+assert c.test() == [11, 21, 31, 41]
+
+assert not mandalka.is_node(Parent())
+assert fails(lambda: GrandChild())
