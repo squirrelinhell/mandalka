@@ -28,12 +28,19 @@ class Resource():
         Resource.v = n
     def __enter__(self):
         Resource.v += 1
+        return self
     def __exit__(self, type, value, traceback):
         Resource.v -= 1
+
+@mandalka.node(save=False)
+class Another():
+    pass
 
 assert Resource.v == 0
 
 with Resource(10) as r:
+    a = Another(r)
+    assert mandalka.describe(r) == "Resource(10)"
     assert Resource.v == 11
 
 assert Resource.v == 10

@@ -55,7 +55,8 @@ def _wrap_class(cls, save=True):
             return "<" + cls.__name__ + " " + params["nodeid"] + ">"
 
         def __enter__(self, *args, **kwargs):
-            return evaluate(self).__enter__(*args, **kwargs)
+            evaluate(self).__enter__(*args, **kwargs)
+            return self
 
         def __exit__(self, *args, **kwargs):
             return evaluate(self).__exit__(*args, **kwargs)
@@ -70,7 +71,7 @@ def _wrap_class(cls, save=True):
 
 def evaluate(node):
     if not is_node(node):
-        raise ValueError("Not a mandalka node: " + node)
+        raise ValueError("Not a mandalka node: " + str(node))
 
     params = object.__getattribute__(node, "_mandalka_params")
     if "obj" not in params:
@@ -81,7 +82,7 @@ def evaluate(node):
 
 def describe(node):
     if not is_node(node):
-        raise ValueError("Not a mandalka node: " + node)
+        raise ValueError("Not a mandalka node: " + str(node))
 
     params = object.__getattribute__(node, "_mandalka_params")
     return params["call"]
