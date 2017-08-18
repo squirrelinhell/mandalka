@@ -24,7 +24,7 @@ import distutils.core
 
 distutils.core.setup(
     name="mandalka",
-    version="1.9",
+    version="1.10",
     description="Computational graph on Python classes",
     author="SquirrelInHell",
     author_email="squirrelinhell@users.noreply.github.com",

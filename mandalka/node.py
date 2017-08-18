@@ -54,7 +54,8 @@ def node(cls=None, save=True):
             ]) + "}"
         try:
             params = object.__getattribute__(obj, "_mandalka_node")
-            return "<" + cls.__name__ + " " + params["nodeid"] + ">"
+            cls_name = params["cls"].__name__
+            return "<" + cls_name + " " + params["nodeid"] + ">"
         except AttributeError:
             pass
         raise ValueError("Invalid argument type: " + str(type(obj)))
@@ -150,6 +151,7 @@ def node(cls=None, save=True):
 
         def __getattribute__(self, name):
             if name not in builtins:
+                # Use inherited methods that are bound to this object
                 try:
                     v = object.__getattribute__(self, name)
                     if v is not None:

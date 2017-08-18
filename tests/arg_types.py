@@ -33,6 +33,11 @@ class Node():
     def __init__(self, a=None, b=None):
         pass
 
+@node(save=False)
+class Another():
+    def __init__(self, a=None, b=None):
+        pass
+
 class NotANode():
     def __init__(self, a=None, b=None):
         pass
@@ -50,6 +55,7 @@ assert fails(lambda: Node(10.0))
 assert not fails(lambda: Node(10))
 
 assert describe(Node(123, b=[])) == "Node(123, b=[])"
-assert describe(Node(a=["a", b"b"])) == "Node(a=['a', b'b'])"
+assert describe(Node({}, b=Another({}))) == "Node({}, b=<Another 0886063eb629af99>)"
+assert describe(Another(a=["a", b"b"])) == "Another(a=['a', b'b'])"
 assert describe(Node({1: 2, "a": ["b"]})) == "Node({1: 2, 'a': ['b']})"
 assert describe(Node((1,), (1, 2))) == "Node((1,), (1, 2))"
