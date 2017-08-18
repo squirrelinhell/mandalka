@@ -33,9 +33,10 @@ foo.a = 10
 assert foo.a == 10
 assert sorted(list(foo.__dict__)) == ["a"]
 
-foo._mandalka_params = 20
-assert foo._mandalka_params == 20
-assert sorted(list(foo.__dict__)) == ["_mandalka_params", "a"]
+assert not hasattr(foo, "_mandalka_node")
+foo._mandalka_node = 20
+assert foo._mandalka_node == 20
+assert sorted(list(foo.__dict__)) == ["_mandalka_node", "a"]
 
 foo.set_a(30)
 assert foo.a == 30

@@ -21,18 +21,29 @@
 
 import mandalka
 
-class Foo():
+class Child():
+    a = 10
+
     def __init__(self):
-        self.x = 1
-    def calculate(self, value):
-        return value * 10
+        Child.b = 20
+        self.__class__.c = 30
+        self.d = 30
+
+    def increase(self):
+        Child.a += 1
+        self.__class__.b += 1
+        self.__class__.c += 1
+        self.d += 1
 
 @mandalka.node(save=False)
-class Goo(Foo):
+class Parent(Child):
     def __init__(self):
         super().__init__()
-        self.x += 2
-    def test(self):
-        return self.calculate(self.x)
 
-assert Goo().test() == 30
+    def test(self):
+        self.increase()
+        return [self.__class__.a, Parent.b, Parent.c, self.d]
+
+p = Parent()
+assert mandalka.is_node(p)
+assert p.test() == [11, 21, 31, 31]

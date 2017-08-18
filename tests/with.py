@@ -28,6 +28,7 @@ class Resource():
         Resource.v = n
     def __enter__(self):
         Resource.v += 1
+        assert mandalka.is_node(self)
         return self
     def __exit__(self, type, value, traceback):
         Resource.v -= 1
