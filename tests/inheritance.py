@@ -72,6 +72,7 @@ class GrandChild(Child):
 c = Child()
 assert mandalka.is_node(c)
 assert c.test() == [11, 21, 31, 41]
+assert c.__class__.__name__ == "Child"
 
 c = Child()
 assert c.override() == 2

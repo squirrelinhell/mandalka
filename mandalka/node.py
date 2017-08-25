@@ -111,9 +111,9 @@ def node(cls=None, save=True):
     if cls is None:
         return lambda c: node(c, save)
 
-    class Wrapper(cls):
+    class Node(cls):
         def __init__(self, *args, **kwargs):
-            if type(self) != Wrapper:
+            if type(self) != Node:
                 raise ValueError("Do not inherit from mandalka nodes")
 
             params = {}
@@ -153,10 +153,12 @@ def node(cls=None, save=True):
             return object.__setattr__(self, name, value)
 
         def __getattribute__(self, name):
+            if name == "__class__":
+                return cls
             evaluate(self)
             return object.__getattribute__(self, name)
 
-    return Wrapper
+    return Node
 
 def is_node(node):
     return node in all_wrappers
