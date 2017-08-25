@@ -21,6 +21,7 @@
 
 import os
 import hashlib
+import threading
 
 class ByInstanceStorage:
     def __init__(self):
@@ -43,79 +44,89 @@ class ByInstanceStorage:
         self.add = add
 
 params = ByInstanceStorage()
-node_by_nodeid = {}
 
 def str_hash(s):
     h = hashlib.sha256(bytes("mandalka:" + s, "UTF-8"))
     return h.digest()[0:8].hex()
 
-described_nodes = []
+def describe_call(function, *args, **kwargs):
+    described_nodes = []
 
-def describe_obj(obj):
-    if obj is None:
-        return "None"
-    if isinstance(obj, (int, str, bytes, bool)):
-        return repr(obj)
-    if isinstance(obj, list):
-        return "[" + ", ".join(map(describe_obj, obj)) + "]"
-    if isinstance(obj, tuple):
-        if len(obj) == 1:
-            return "(" + describe_obj(obj[0]) + ",)"
-        else:
-            return "(" + ", ".join(map(describe_obj, obj)) + ")"
-    if isinstance(obj, dict):
-        return "{" + ", ".join([
-            describe_obj(k) + ": " + describe_obj(v)
-            for k, v in obj.items()
-        ]) + "}"
-    p = params.get(obj)
-    if p is not None:
-        described_nodes.append(obj)
-        return "<" + p["cls"].__name__ + " " + p["nodeid"] + ">"
-    raise ValueError("Invalid argument type: " + str(type(obj)))
+    def d(obj):
+        if obj is None:
+            return "None"
+        if isinstance(obj, (int, str, bytes, bool)):
+            return repr(obj)
+        if isinstance(obj, list):
+            return "[" + ", ".join(map(d, obj)) + "]"
+        if isinstance(obj, tuple):
+            if len(obj) == 1:
+                return "(" + d(obj[0]) + ",)"
+            else:
+                return "(" + ", ".join(map(d, obj)) + ")"
+        if isinstance(obj, dict):
+            return "{" + ", ".join([
+                d(k) + ": " + d(v)
+                for k, v in obj.items()
+            ]) + "}"
+        p = params.get(obj)
+        if p is not None:
+            described_nodes.append(obj)
+            return "<" + p["cls"].__name__ + " " + p["nodeid"] + ">"
+        raise ValueError("Invalid argument type: " + str(type(obj)))
 
-def describe_call(obj, *args, **kwargs):
-    args_str = list(map(describe_obj, args))
+    args_str = list(map(d, args))
     for k in sorted(kwargs):
-        args_str.append(str(k) + "=" + describe_obj(kwargs[k]))
-    return obj.__name__ + "(" + ", ".join(args_str) + ")"
+        args_str.append(str(k) + "=" + d(kwargs[k]))
+    description = function.__name__ + "(" + ", ".join(args_str) + ")"
+    return description, described_nodes
 
 def evaluate(node):
     p = params.get(node)
-    if "initialized" not in p:
-        p["initialized"] = True
-        args, kwargs = p["args"], p["kwargs"]
-        del p["args"], p["kwargs"]
+    with p["lock"]:
+        if "error" in p:
+            raise RuntimeError("%s.__init__() failed" % node)
+        if "initialized" not in p:
+            p["initialized"] = True
+            args, kwargs = p["args"], p["kwargs"]
+            del p["args"], p["kwargs"]
 
-        p["cls"].__init__(node, *args, **kwargs)
-
+            try:
+                p["cls"].__init__(node, *args, **kwargs)
+            except:
+                p["error"] = True
+                raise
     return node
 
-def evaluate_all_children(node, visited=None):
-    if visited is None:
-        visited = ByInstanceStorage()
-    for child in params.get(node)["children"]:
-        if not visited.get(child):
-            visited.add(child, True)
-            evaluate(child)
-            evaluate_all_children(child, visited)
+def evaluate_subgraph(node):
+    visited = ByInstanceStorage()
+    def visit(n):
+        if not visited.get(n):
+            visited.add(n, True)
+            evaluate(n)
+            for child in params.get(n)["outputs"]:
+                visit(child)
+    visit(node)
     return node
 
 def node(cls):
+    node_by_nodeid = {}
+    lock = threading.Lock()
+
     class Node(cls):
         def __new__(node_cls, *args, **kwargs):
             if node_cls != Node:
                 raise ValueError("Do not inherit from mandalka nodes")
 
-            call = describe_call(cls, *args, **kwargs)
+            call, inputs = describe_call(cls, *args, **kwargs)
             nodeid = str_hash(call)
 
-            try:
-                return node_by_nodeid[nodeid]
-            except KeyError:
-                pass
-
-            node = cls.__new__(node_cls)
+            with lock:
+                try:
+                    return node_by_nodeid[nodeid]
+                except KeyError:
+                    node = cls.__new__(node_cls)
+                    node_by_nodeid[nodeid] = node
 
             p = {}
             p["cls"] = cls
@@ -123,28 +134,18 @@ def node(cls):
             p["kwargs"] = kwargs
             p["call"] = call
             p["nodeid"] = nodeid
-            p["children"] = []
+            p["lock"] = threading.RLock()
+            p["inputs"] = inputs
+            p["outputs"] = []
+
+            for i in inputs:
+                params.get(i)["outputs"].append(node)
 
             params.add(node, p)
-            node_by_nodeid[nodeid] = node
-
-            global described_nodes
-            for parent in described_nodes:
-                params.get(parent)["children"].append(node)
-            described_nodes = []
-
             return node
 
         def __init__(self, *args, **kwargs):
             pass
-
-        def __enter__(self, *args, **kwargs):
-            evaluate(self)
-            return cls.__enter__(self, *args, **kwargs)
-
-        def __exit__(self, *args, **kwargs):
-            evaluate_all_children(self)
-            return cls.__exit__(self, *args, **kwargs)
 
         def __setattr__(self, name, value):
             evaluate(self)
@@ -159,8 +160,20 @@ def node(cls):
     def to_str(o):
         return "<" + cls.__name__ + " " + params.get(o)["nodeid"] + ">"
 
-    cls.__str__ = to_str
-    cls.__repr__ = to_str
+    Node.__str__ = to_str
+    Node.__repr__ = to_str
+
+    def wrap(f, prepare=evaluate):
+        def wrapped_f(self, *args, **kwargs):
+            prepare(self)
+            return f(self, *args, **kwargs)
+        return wrapped_f
+
+    if "__enter__" in cls.__dict__:
+        Node.__enter__ = wrap(cls.__enter__)
+
+    if "__exit__" in cls.__dict__:
+        Node.__exit__ = wrap(cls.__exit__, evaluate_subgraph)
 
     return Node
 
@@ -172,3 +185,9 @@ def describe(node):
 
 def unique_id(node):
     return params.get(node)["nodeid"]
+
+def inputs(node):
+    return params.get(node)["inputs"].copy()
+
+def outputs(node):
+    return params.get(node)["outputs"].copy()

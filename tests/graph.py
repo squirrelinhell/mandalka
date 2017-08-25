@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 # Copyright (c) 2017 SquirrelInHell
 #
@@ -20,19 +19,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-import distutils.core
+import mandalka
 
-if sys.version_info[0] < 3:
-    print("Mandalka requires Python 3")
-    sys.exit(1)
+@mandalka.node
+class A:
+    def __init__(self, *_):
+        pass
 
-distutils.core.setup(
-    name="mandalka",
-    version="2.2",
-    description="Computational graph on Python classes",
-    author="SquirrelInHell",
-    author_email="squirrelinhell@users.noreply.github.com",
-    url="https://github.com/squirrelinhell/mandalka/",
-    packages=["mandalka"],
-)
+def full_print(a):
+    return "A(" + ", ".join(map(full_print, mandalka.inputs(a))) + ")"
+
+assert full_print(A(A(A()))) == "A(A(A()))"
+assert full_print(A(A(A()), A(A(A())))) == "A(A(A()), A(A(A())))"
+
+def graph(a, indent=0):
+    return ("\n".join([" "*indent + full_print(a)]
+        + [graph(o, indent=indent+2) for o in mandalka.outputs(a)]))
+
+assert "\n" + graph(A()) + "\n" == """
+A()
+  A(A())
+    A(A(A()))
+      A(A(A()), A(A(A())))
+    A(A(A()), A(A(A())))
+"""

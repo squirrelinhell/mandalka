@@ -35,6 +35,7 @@ class Resource:
 @mandalka.node
 class Another:
     def __init__(self, resource):
+        assert mandalka.is_node(self)
         assert mandalka.describe(resource) == "Resource(10)"
         self.opened = resource.opened
 
@@ -42,3 +43,6 @@ with Resource(10) as r:
     a = Another(r)
 
 assert a.opened == 1
+
+assert hasattr(Resource, "__enter__")
+assert not hasattr(Another, "__enter__")

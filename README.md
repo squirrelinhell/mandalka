@@ -7,7 +7,7 @@ pip install --upgrade git+https://github.com/squirrelinhell/mandalka.git
 
 # What is it?
 
-Mandalka makes your Python objects unique, based on arguments
+Mandalka makes Python objects unique, based on arguments
 passed to `__init__`. So this kind of code will run fast:
 
 ```python

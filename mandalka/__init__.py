@@ -19,5 +19,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .node import node, is_node, unique_id, evaluate, describe
+from .node import node, is_node, unique_id, evaluate, describe, inputs, outputs
 from .threads import threads

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 # Copyright (c) 2017 SquirrelInHell
 #
@@ -20,19 +19,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-import distutils.core
+import mandalka
 
-if sys.version_info[0] < 3:
-    print("Mandalka requires Python 3")
-    sys.exit(1)
+@mandalka.node
+class Pascal:
+    calls = 0
+    def __init__(self, n, k):
+        Pascal.calls += 1
+        if k <= 0 or k >= n:
+            self.n = 1
+        else:
+            add = [Pascal(n-1, k-1), Pascal(n-1, k)]
+            mandalka.threads(add)
+            self.n = add[0].n + add[1].n
 
-distutils.core.setup(
-    name="mandalka",
-    version="2.2",
-    description="Computational graph on Python classes",
-    author="SquirrelInHell",
-    author_email="squirrelinhell@users.noreply.github.com",
-    url="https://github.com/squirrelinhell/mandalka/",
-    packages=["mandalka"],
-)
+assert Pascal(30, 8).n == 5852925
+assert Pascal.calls == 206
