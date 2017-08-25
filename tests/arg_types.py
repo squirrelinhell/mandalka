@@ -29,16 +29,16 @@ def fails(f):
         return True
 
 @node
-class Node():
+class Node:
     def __init__(self, a=None, b=None):
         pass
 
 @node
-class Another():
+class Another:
     def __init__(self, a=None, b=None):
         pass
 
-class NotANode():
+class NotANode:
     def __init__(self, a=None, b=None):
         pass
 

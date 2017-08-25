@@ -24,7 +24,7 @@ import time
 import mandalka
 
 @mandalka.node
-class Squares():
+class Squares:
     waiting = 0
 
     def __init__(self, start, end):

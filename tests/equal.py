@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 # Copyright (c) 2017 SquirrelInHell
 #
@@ -20,19 +19,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-import distutils.core
+import mandalka
 
-if sys.version_info[0] < 3:
-    print("Mandalka requires Python 3")
-    sys.exit(1)
+@mandalka.node
+class Singleton:
+    pass
 
-distutils.core.setup(
-    name="mandalka",
-    version="2.1",
-    description="Computational graph on Python classes",
-    author="SquirrelInHell",
-    author_email="squirrelinhell@users.noreply.github.com",
-    url="https://github.com/squirrelinhell/mandalka/",
-    packages=["mandalka"],
-)
+@mandalka.node
+class Another:
+    def __init__(*_):
+        pass
+
+s1 = Singleton()
+s2 = Singleton()
+s1.value = 7
+assert s2.value == 7
+
+assert s1 == s2
+assert not s1 != s2
+
+assert Another() != s1
+assert not s2 == Another()
+
+assert Another(Another()) == Another(Another())
+assert not Another(Another()) == Another(Another(Another()))
+
+@mandalka.node
+class WeirdEqual:
+    def __init__(self):
+        self.foo = 15
+    def __eq__(self, other):
+        return self.foo
+
+assert 15 == (WeirdEqual() == "")

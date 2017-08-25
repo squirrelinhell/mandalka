@@ -14,7 +14,7 @@ passed to `__init__`. So this kind of code will run fast:
 import mandalka
 
 @mandalka.node
-class Fib():
+class Fib:
     def __init__(self, n):
         if n <= 1:
             self.n = n
@@ -32,13 +32,13 @@ import os
 import numpy as np
 
 @mandalka.node
-class Data():
+class Data:
     def __init__(self, data):
         print("Computing...")
         self.squares = np.square(data)
 
 @mandalka.node
-class Model():
+class Model:
     def __init__(self, data):
         path = mandalka.unique_id(self) + ".npy"
         if os.path.exists(path):

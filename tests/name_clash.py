@@ -22,7 +22,7 @@
 import mandalka
 
 @mandalka.node
-class Foo():
+class Foo:
     def set_a(self, value):
         self.a = value
 

@@ -22,7 +22,7 @@
 import mandalka
 
 @mandalka.node
-class Resource():
+class Resource:
     def __init__(self, n):
         self.opened = 0
     def __enter__(self):
@@ -33,7 +33,7 @@ class Resource():
         self.opened -= 1
 
 @mandalka.node
-class Another():
+class Another:
     def __init__(self, resource):
         assert mandalka.describe(resource) == "Resource(10)"
         self.opened = resource.opened
