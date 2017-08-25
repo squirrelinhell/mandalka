@@ -19,5 +19,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from mandalka.node import node, is_node, evaluate, describe
-from mandalka.threads import threads
+from .node import node, is_node, evaluate, describe
+from .threads import threads

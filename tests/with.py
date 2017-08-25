@@ -23,25 +23,22 @@ import mandalka
 
 @mandalka.node(save=False)
 class Resource():
-    v = 0
     def __init__(self, n):
-        Resource.v = n
+        self.opened = 0
     def __enter__(self):
-        Resource.v += 1
         assert mandalka.is_node(self)
+        self.opened += 1
         return self
     def __exit__(self, type, value, traceback):
-        Resource.v -= 1
+        self.opened -= 1
 
 @mandalka.node(save=False)
 class Another():
-    pass
-
-assert Resource.v == 0
+    def __init__(self, resource):
+        assert mandalka.describe(resource) == "Resource(10)"
+        self.opened = resource.opened
 
 with Resource(10) as r:
     a = Another(r)
-    assert mandalka.describe(r) == "Resource(10)"
-    assert Resource.v == 11
 
-assert Resource.v == 10
+assert a.opened == 1

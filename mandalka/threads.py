@@ -20,7 +20,8 @@
 # SOFTWARE.
 
 import threading
-import mandalka
+
+from .node import evaluate
 
 def threads(*args):
     if len(args) == 1:
@@ -31,7 +32,7 @@ def threads(*args):
             pass
 
     threads = [
-        threading.Thread(target = mandalka.evaluate, args = (o,))
+        threading.Thread(target=evaluate, args=(o,))
         for o in args
     ]
     [t.start() for t in threads]

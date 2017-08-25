@@ -73,7 +73,9 @@ c = Child()
 assert mandalka.is_node(c)
 assert c.test() == [11, 21, 31, 41]
 
+c = Child()
 assert c.override() == 2
 assert c.test_override() == 2
+
 
 assert fails(lambda: GrandChild())
