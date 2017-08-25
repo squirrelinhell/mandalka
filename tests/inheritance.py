@@ -55,7 +55,7 @@ class Parent(GrandParent):
         self.__class__.c += 1
         self.d += 1
 
-@mandalka.node(save=False)
+@mandalka.node
 class Child(Parent):
     def __init__(self):
         assert mandalka.is_node(self)

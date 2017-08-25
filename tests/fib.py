@@ -19,28 +19,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-import time
 import mandalka
 
 @mandalka.node
-class Squares():
-    waiting = 0
-
-    def __init__(self, start, end):
-        if end - start <= 1:
-            # Wait until all threads get here
-            Squares.waiting += 1
-            while Squares.waiting < 4:
-                time.sleep(0.01)
-
-            self.x = [start * start]
+class Fib():
+    def __init__(self, n):
+        if n <= 1:
+            self.n = n
         else:
-            half = start + (end - start) // 2
-            a, b = mandalka.threads(
-                Squares(start, half),
-                Squares(half, end),
-            )
-            self.x = a.x + b.x
+            self.n = Fib(n-1).n + Fib(n-2).n
 
-assert Squares(0, 4).x == [0, 1, 4, 9]
+assert Fib(100).n == 354224848179261915075

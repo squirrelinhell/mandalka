@@ -28,12 +28,12 @@ def fails(f):
     except:
         return True
 
-@node(save=False)
+@node
 class Node():
     def __init__(self, a=None, b=None):
         pass
 
-@node(save=False)
+@node
 class Another():
     def __init__(self, a=None, b=None):
         pass

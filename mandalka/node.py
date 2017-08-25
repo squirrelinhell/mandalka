@@ -23,11 +23,7 @@ import os
 import hashlib
 
 all_wrappers = {}
-
-def get_env(name, default=None):
-    if name in os.environ and len(os.environ[name]) >= 1:
-        return os.environ[name]
-    return default
+wrapper_by_id = {}
 
 def str_hash(s):
     h = hashlib.sha256(bytes("mandalka:" + s, "UTF-8"))
@@ -68,37 +64,13 @@ def evaluate(node):
     if not node in all_wrappers:
         raise ValueError("Not a mandalka node: " + str(node))
 
-    params = all_wrappers[node]
-    if "initialized" in params:
-        return node
+    p = all_wrappers[node]
+    if "initialized" not in p:
+        p["initialized"] = True
+        args, kwargs = p["args"], p["kwargs"]
+        del p["args"], p["kwargs"]
 
-    nodeid = params["cls"].__name__.lower() + "_" + params["nodeid"]
-    cache_dir = get_env("MANDALKA_CACHE", "./__saved__")
-    save_path = cache_dir + "/" + nodeid
-
-    params["initialized"] = True
-
-    if os.path.exists(save_path):
-        # Tell the object to load itself from cache
-        del params["args"], params["kwargs"]
-        params["cls"].__load__(node, save_path)
-        return node
-
-    # Or to build a new instance
-    try:
-        params["cls"].__init__(node, *params["args"], **params["kwargs"])
-    finally:
-        del params["args"], params["kwargs"]
-
-    if params["save"]:
-        # And then save it to cache
-        os.makedirs(save_path + ".save", exist_ok=True)
-        params["cls"].__save__(node, save_path + ".save")
-        os.rename(save_path + ".save", save_path)
-
-        # Also save the description of this node
-        with open(cache_dir + "/info.txt", "a") as f:
-            f.write(nodeid + "\t" + params["call"] + "\n")
+        p["cls"].__init__(node, *args, **kwargs)
 
     return node
 
@@ -106,23 +78,28 @@ def evaluate_with_children(node):
     evaluate(node)
     for child in all_wrappers[node]["children"]:
         evaluate_with_children(child)
+    return node
 
-def node(cls=None, save=True):
-    if cls is None:
-        return lambda c: node(c, save)
-
+def node(cls):
     class Node(cls):
         def __init__(self, *args, **kwargs):
             if type(self) != Node:
                 raise ValueError("Do not inherit from mandalka nodes")
 
+            call = describe_call(cls, *args, **kwargs)
+            nodeid = str_hash(call)
+
+            if nodeid in wrapper_by_id:
+                all_wrappers[self] = wrapper_by_id[nodeid]
+                return
+
             params = {}
+            params["obj"] = self
             params["cls"] = cls
-            params["save"] = save
             params["args"] = args
             params["kwargs"] = kwargs
-            params["call"] = describe_call(cls, *args, **kwargs)
-            params["nodeid"] = str_hash(params["call"])
+            params["call"] = call
+            params["nodeid"] = nodeid
             params["children"] = []
 
             global described_nodes
@@ -131,31 +108,32 @@ def node(cls=None, save=True):
             described_nodes = []
 
             all_wrappers[self] = params
+            wrapper_by_id[nodeid] = params
 
         def __str__(self):
-            return ("<" + all_wrappers[self]["cls"].__name__
+            return ("<" + cls.__name__
                 + " " + all_wrappers[self]["nodeid"] + ">")
 
         def __repr__(self):
-            return ("<" + all_wrappers[self]["cls"].__name__
+            return ("<" + cls.__name__
                 + " " + all_wrappers[self]["nodeid"] + ">")
 
         def __enter__(self, *args, **kwargs):
-            evaluate(self)
+            self = evaluate(all_wrappers[self]["obj"])
             return cls.__enter__(self, *args, **kwargs)
 
         def __exit__(self, *args, **kwargs):
-            evaluate_with_children(self)
+            self = evaluate_with_children(all_wrappers[self]["obj"])
             return cls.__exit__(self, *args, **kwargs)
 
         def __setattr__(self, name, value):
-            evaluate(self)
+            self = evaluate(all_wrappers[self]["obj"])
             return object.__setattr__(self, name, value)
 
         def __getattribute__(self, name):
             if name == "__class__":
                 return cls
-            evaluate(self)
+            self = evaluate(all_wrappers[self]["obj"])
             return object.__getattribute__(self, name)
 
     return Node
@@ -168,3 +146,9 @@ def describe(node):
         raise ValueError("Not a mandalka node: " + str(node))
 
     return all_wrappers[node]["call"]
+
+def unique_id(node):
+    if not node in all_wrappers:
+        raise ValueError("Not a mandalka node: " + str(node))
+
+    return all_wrappers[node]["nodeid"]

@@ -21,7 +21,7 @@
 
 import mandalka
 
-@mandalka.node(save=False)
+@mandalka.node
 class Foo():
     def set_a(self, value):
         self.a = value
@@ -41,4 +41,5 @@ assert sorted(list(foo.__dict__)) == ["_mandalka_node", "a"]
 foo.set_a(30)
 assert foo.a == 30
 
+assert mandalka.unique_id(foo) == "18fc9a9bb4ef830a"
 assert str(foo) == "<Foo 18fc9a9bb4ef830a>"

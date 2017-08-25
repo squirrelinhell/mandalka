@@ -21,7 +21,7 @@
 
 import mandalka
 
-@mandalka.node(save=False)
+@mandalka.node
 class Resource():
     def __init__(self, n):
         self.opened = 0
@@ -32,7 +32,7 @@ class Resource():
     def __exit__(self, type, value, traceback):
         self.opened -= 1
 
-@mandalka.node(save=False)
+@mandalka.node
 class Another():
     def __init__(self, resource):
         assert mandalka.describe(resource) == "Resource(10)"
