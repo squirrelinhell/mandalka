@@ -26,20 +26,11 @@ class A:
     def __init__(self, *_):
         pass
 
-def full_print(a):
-    return "A(" + ", ".join(map(full_print, mandalka.inputs(a))) + ")"
+def inputs(a):
+    return ", ".join(sorted([
+        mandalka.describe(i, -1) for i in mandalka.inputs(a)
+    ]))
 
-assert full_print(A(A(A()))) == "A(A(A()))"
-assert full_print(A(A(A()), A(A(A())))) == "A(A(A()), A(A(A())))"
-
-def graph(a, indent=0):
-    return ("\n".join([" "*indent + full_print(a)]
-        + [graph(o, indent=indent+2) for o in mandalka.outputs(a)]))
-
-assert "\n" + graph(A()) + "\n" == """
-A()
-  A(A())
-    A(A(A()))
-      A(A(A()), A(A(A())))
-    A(A(A()), A(A(A())))
-"""
+assert inputs(A(A(A()))) == "A(A())"
+assert inputs(A(A(A()), A(A()))) == "A(A())"
+assert inputs(A(A(A()), A(A(A())))) == "A(A()), A(A(A()))"

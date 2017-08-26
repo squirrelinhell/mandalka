@@ -27,7 +27,7 @@ class Foo:
         self.a = value
 
 foo = Foo()
-assert str(foo) == "<Foo 18fc9a9bb4ef830a>"
+assert str(foo) == "<Foo cf5448839e9bd525>"
 
 foo.a = 10
 assert foo.a == 10
@@ -41,5 +41,5 @@ assert sorted(list(foo.__dict__)) == ["_mandalka_node", "a"]
 foo.set_a(30)
 assert foo.a == 30
 
-assert mandalka.unique_id(foo) == "18fc9a9bb4ef830a"
-assert str(foo) == "<Foo 18fc9a9bb4ef830a>"
+assert mandalka.unique_id(foo) == "cf5448839e9bd525"
+assert str(foo) == "<Foo cf5448839e9bd525>"

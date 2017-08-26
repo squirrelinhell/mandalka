@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 # Copyright (c) 2017 SquirrelInHell
 #
@@ -20,19 +19,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-import distutils.core
+import mandalka
 
-if sys.version_info[0] < 3:
-    print("Mandalka requires Python 3")
-    sys.exit(1)
+@mandalka.node
+class S:
+    def __init__(*_):
+        pass
 
-distutils.core.setup(
-    name="mandalka",
-    version="2.3",
-    description="Computational graph on Python classes",
-    author="SquirrelInHell",
-    author_email="squirrelinhell@users.noreply.github.com",
-    url="https://github.com/squirrelinhell/mandalka/",
-    packages=["mandalka"],
-)
+one = S(0)
+two = S(one)
+three = S(two)
+
+assert two != S(S(S(0)))
+assert three == S(S(S(0)))
+
+numbers = {}
+i = 0
+n = 0
+while n != S(S(S(S(S(0))))):
+    numbers[n] = i
+    i += 1
+    n = S(n)
+
+assert numbers[S(0)] == 1
+assert numbers[S(S(0))] == 2
+assert numbers[S(S(S(0)))] == 3
+assert numbers[S(S(S(S(0))))] == 4

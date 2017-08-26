@@ -25,28 +25,46 @@ trap "rm -rf $TMPDIR" EXIT
 
 export PYTHONPATH="$(pwd):$PYTHONPATH"
 
-TESTS="$@"
-if [ "x$TESTS" = x ]; then
-    TESTS=$(ls tests)
+if [ "x$1" != x ]; then
+    TEST_FILE="$1"
+    [ -f "$TEST_FILE" ] || TEST_FILE="tests/$TEST_FILE"
+    [ -f "$TEST_FILE" ] || TEST_FILE="$TEST_FILE.py"
+    echo "import debug" > "$TMPDIR/run.py"
+    cat "$TEST_FILE" >> "$TMPDIR/run.py"
+    (cd "$TMPDIR" && python3 "./run.py")
+    exit $?
 fi
 
 ID=1
-while read test 0<&3; do
+for test in demo.py $(ls tests); do
     echo "Test: $test..."
     mkdir "$TMPDIR/$ID" || exit 1
 
-    {
-        echo "import debug"
-        cat "tests/$test"
-    } > "$TMPDIR/$ID/$test" || exit 1
+    TEST_FILE="$test"
+    [ -f "$TEST_FILE" ] || TEST_FILE="tests/$TEST_FILE"
+    cat "$TEST_FILE" > "$TMPDIR/$ID/run.py"
 
-    if ! (cd "$TMPDIR/$ID" && python3 "./$test"); then
+    OUT_FILE="${TEST_FILE%.*}.out"
+    if [ -f "$OUT_FILE" ]; then
+        cat "$OUT_FILE"
+    else
+        echo "---"
+    fi > "$TMPDIR/ans"
+
+    if ! (cd "$TMPDIR/$ID" \
+            && python3 "./run.py" \
+            && echo "---" \
+            && python3 "./run.py") </dev/null >"$TMPDIR/out"; then
         echo
         echo "TEST FAILED: $test"
         echo
-        exit 1
+    elif ! diff -b -q "$TMPDIR/ans" "$TMPDIR/out" >/dev/null; then
+        echo
+        echo "INCORRECT OUTPUT: $test"
+        echo
+        diff -b --color=auto "$TMPDIR/ans" "$TMPDIR/out"
     fi
 
     rm -rf "$TMPDIR/$ID" || true
     let ID=ID+1
-done 3<<<"$TESTS"
+done

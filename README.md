@@ -21,7 +21,7 @@ class Fib:
         else:
             self.n = Fib(n-1).n + Fib(n-2).n
 
-print(Fib(100).n) # prints '354224848179261915075'
+print(Fib(100).n) # prints "354224848179261915075"
 ```
 
 It also provides lazy evaluation, which makes it possible to
@@ -33,9 +33,10 @@ import numpy as np
 
 @mandalka.node
 class Data:
-    def __init__(self, data):
+    def __init__(self, size):
+        # This code will not run if Model doesn't need it
         print("Computing...")
-        self.squares = np.square(data)
+        self.squares = np.square(np.arange(size))
 
 @mandalka.node
 class Model:
@@ -47,10 +48,39 @@ class Model:
             self.weights = data.squares * 10
             np.save(path, self.weights)
 
-model = Model(Data([1, 2, 3]))
+model = Model(Data(5))
 
-# This will print 'Computing...' only for the first time:
+# Prints "Computing..." only for the first time this script is run:
 print(model.weights)
+```
+
+Arguments passed to constructors of nodes can only
+be made out of other nodes and basic Python types
+(`int`, `bool`, `str`, `bytes`, `list`, `tuple`, `dict`).
+
+The uniqueness of mandalka nodes makes it possible
+to write code more similar to what one would expect from
+functional programming, or mathematical notation:
+
+```python
+@mandalka.node
+class S:
+    def __init__(*_):
+        pass
+
+two = S(S(0))
+three = S(S(S(0)))
+assert three == S(two)
+
+def add(a, b):
+    counter = 0
+    while counter != b:
+        a = S(a)
+        counter = S(counter)
+    return a
+
+five = add(two, three)
+print(mandalka.describe(five, -1)) # prints "S(S(S(S(S(0)))))"
 ```
 
 # License

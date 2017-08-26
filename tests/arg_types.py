@@ -31,7 +31,7 @@ def fails(f):
 @node
 class Node:
     def __init__(self, a=None, b=None):
-        pass
+        self.a, self.b = a, b
 
 @node
 class Another:
@@ -54,8 +54,44 @@ assert not fails(lambda: Node(Node(Node(3, 4), Node(3))))
 assert fails(lambda: Node(10.0))
 assert not fails(lambda: Node(10))
 
-assert describe(Node(123, b=[])) == "Node(123, b=[])"
-assert describe(Node({}, b=Another({}))) == "Node({}, b=<Another 0886063eb629af99>)"
-assert describe(Another(a=["a", b"b"])) == "Another(a=['a', b'b'])"
-assert describe(Node({1: 2, "a": ["b"]})) == "Node({1: 2, 'a': ['b']})"
-assert describe(Node((1,), (1, 2))) == "Node((1,), (1, 2))"
+modify_args = [1, {2: [3, 4]}]
+
+nodes = [
+    Node(123, b=[]),
+    Node({"b": 1, "a": 2}, b=Another({})),
+    Another(a=["a", b"b"]),
+    Node({1: 2, "a": ["b"]}),
+    Node((1,), (1, 2)),
+    Node(*modify_args),
+]
+
+modify_args[1][2].append(5)
+
+assert [describe(n, 0) for n in nodes] == [
+    '<Node 8b51709e3dacb29d>',
+    '<Node f4b93a350e044a22>',
+    '<Another c66ee6a7b28d272f>',
+    '<Node 157b57137711dfd9>',
+    '<Node e19dd50395b7a491>',
+    '<Node e0e08e91f627c6ad>',
+]
+
+assert [describe(n) for n in nodes] == [
+    "Node(123, b=[])",
+    "Node({'a': 2, 'b': 1}, b=<Another 491465a316fdf989>)",
+    "Another(a=['a', b'b'])",
+    "Node({'a': ['b'], 1: 2})",
+    "Node((1,), (1, 2))",
+    "Node(1, {2: [3, 4]})",
+]
+
+assert [describe(n, 2) for n in nodes] == [
+    "Node(123, b=[])",
+    "Node({'a': 2, 'b': 1}, b=Another({}))",
+    "Another(a=['a', b'b'])",
+    "Node({'a': ['b'], 1: 2})",
+    "Node((1,), (1, 2))",
+    "Node(1, {2: [3, 4]})",
+]
+
+assert repr(nodes[5].b) == "{2: [3, 4]}"

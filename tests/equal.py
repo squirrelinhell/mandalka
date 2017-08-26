@@ -46,9 +46,29 @@ assert not Another(Another()) == Another(Another(Another()))
 
 @mandalka.node
 class WeirdEqual:
+    foo = 0
     def __init__(self):
-        self.foo = 15
+        WeirdEqual.foo += 1
     def __eq__(self, other):
-        return self.foo
+        return other + str(WeirdEqual.foo)
 
-assert 15 == (WeirdEqual() == "")
+assert "a1" == (WeirdEqual() == "a")
+
+class BaseEqual:
+    foo = 0
+    def __init__(self):
+        BaseEqual.foo += 1
+    def __eq__(self, other):
+        return other + str(BaseEqual.foo)
+
+@mandalka.node
+class InheritEqual(BaseEqual):
+    def __init__(self, *_):
+        super().__init__()
+
+assert "b1" == (InheritEqual(0) == "b")
+
+InheritEqual(1)
+InheritEqual(2) == "x"
+InheritEqual(3) == "y"
+assert BaseEqual.foo == 3
