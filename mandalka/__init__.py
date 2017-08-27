@@ -19,5 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+version = (2, 4)
+
 from .node import node, is_node, unique_id, evaluate, describe, inputs
 from .threads import threads

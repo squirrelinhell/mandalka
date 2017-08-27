@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import sys
+import mandalka
 import distutils.core
 
 if sys.version_info[0] < 3:
@@ -29,7 +30,7 @@ if sys.version_info[0] < 3:
 
 distutils.core.setup(
     name="mandalka",
-    version="2.3",
+    version=".".join(map(str, mandalka.version)),
     description="Computational graph on Python classes",
     author="SquirrelInHell",
     author_email="squirrelinhell@users.noreply.github.com",
