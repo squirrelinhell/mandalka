@@ -36,33 +36,39 @@ if [ "x$1" != x ]; then
 fi
 
 ID=1
-for test in demo.py $(ls tests); do
-    echo "Test: $test..."
+for test in demo.py $(find tests -name '*.py' | sort); do
+    echo -n "Test: $test... "
     mkdir "$TMPDIR/$ID" || exit 1
 
-    TEST_FILE="$test"
-    [ -f "$TEST_FILE" ] || TEST_FILE="tests/$TEST_FILE"
-    cat "$TEST_FILE" > "$TMPDIR/$ID/run.py"
+    cat "$test" > "$TMPDIR/$ID/run.py"
 
-    OUT_FILE="${TEST_FILE%.*}.out"
+    OUT_FILE="${test%.*}.out"
     if [ -f "$OUT_FILE" ]; then
         cat "$OUT_FILE"
     else
         echo "---"
     fi > "$TMPDIR/ans"
 
-    if ! (cd "$TMPDIR/$ID" \
-            && python3 "./run.py" \
-            && echo "---" \
-            && python3 "./run.py") </dev/null >"$TMPDIR/out"; then
+    (cd "$TMPDIR/$ID" \
+        && python3 "./run.py" \
+        && echo "---" \
+        && python3 "./run.py") \
+            </dev/null >"$TMPDIR/out" 2>/dev/null
+    RESULT=$?
+
+    if ! [ "x$RESULT" = x0 ]; then
+        echo FAIL
         echo
-        echo "TEST FAILED: $test"
+        echo "EXIT CODE $RESULT: $test"
         echo
     elif ! diff -b -q "$TMPDIR/ans" "$TMPDIR/out" >/dev/null; then
+        echo FAIL
         echo
         echo "INCORRECT OUTPUT: $test"
         echo
         diff -b --color=auto "$TMPDIR/ans" "$TMPDIR/out"
+    else
+        echo OK
     fi
 
     rm -rf "$TMPDIR/$ID" || true
