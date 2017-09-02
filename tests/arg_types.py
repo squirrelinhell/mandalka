@@ -51,47 +51,22 @@ assert not fails(lambda: NotANode(Node(1, 2), 3))
 assert fails(lambda: Node(Node(NotANode(1, 2), 3)))
 assert not fails(lambda: Node(Node(Node(3, 4), Node(3))))
 
-assert fails(lambda: Node(10.0))
-assert not fails(lambda: Node(10))
-
 modify_args = [1, {2: [3, 4]}]
 
 nodes = [
+    Node(*modify_args),
     Node(123, b=[]),
     Node({"b": 1, "a": 2}, b=Another({})),
     Another(a=["a", b"b"]),
     Node({1: 2, "a": ["b"]}),
-    Node((1,), (1, 2)),
-    Node(*modify_args),
+    Node((3.14, (0.00159, 0.1 * 0.1))),
+    Node(set([5, 2, 3, 4, 1]))
 ]
 
 modify_args[1][2].append(5)
+assert repr(nodes[0].b) == "{2: [3, 4]}"
 
-assert [describe(n, 0) for n in nodes] == [
-    '<Node 8b51709e3dacb29d>',
-    '<Node f4b93a350e044a22>',
-    '<Another c66ee6a7b28d272f>',
-    '<Node 157b57137711dfd9>',
-    '<Node e19dd50395b7a491>',
-    '<Node e0e08e91f627c6ad>',
-]
-
-assert [describe(n) for n in nodes] == [
-    "Node(123, b=[])",
-    "Node({'a': 2, 'b': 1}, b=<Another 491465a316fdf989>)",
-    "Another(a=['a', b'b'])",
-    "Node({'a': ['b'], 1: 2})",
-    "Node((1,), (1, 2))",
-    "Node(1, {2: [3, 4]})",
-]
-
-assert [describe(n, 2) for n in nodes] == [
-    "Node(123, b=[])",
-    "Node({'a': 2, 'b': 1}, b=Another({}))",
-    "Another(a=['a', b'b'])",
-    "Node({'a': ['b'], 1: 2})",
-    "Node((1,), (1, 2))",
-    "Node(1, {2: [3, 4]})",
-]
-
-assert repr(nodes[5].b) == "{2: [3, 4]}"
+for n in nodes:
+    print(describe(n, 0))
+    print(describe(n))
+    print(describe(n, 2))

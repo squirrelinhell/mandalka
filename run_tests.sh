@@ -29,6 +29,7 @@ if [ "x$1" != x ]; then
     TEST_FILE="$1"
     [ -f "$TEST_FILE" ] || TEST_FILE="tests/$TEST_FILE"
     [ -f "$TEST_FILE" ] || TEST_FILE="$TEST_FILE.py"
+    export DEBUG=1
     echo "import debug" > "$TMPDIR/run.py"
     cat "$TEST_FILE" >> "$TMPDIR/run.py"
     (cd "$TMPDIR" && python3 "./run.py")
@@ -45,15 +46,16 @@ for test in demo.py $(find tests -name '*.py' | sort); do
     OUT_FILE="${test%.*}.out"
     if [ -f "$OUT_FILE" ]; then
         cat "$OUT_FILE"
-    else
-        echo "---"
     fi > "$TMPDIR/ans"
 
-    (cd "$TMPDIR/$ID" \
+    ( \
+        cd "$TMPDIR/$ID" \
         && python3 "./run.py" \
-        && echo "---" \
-        && python3 "./run.py") \
-            </dev/null >"$TMPDIR/out" 2>/dev/null
+        && ( \
+            ! grep -q '^---$' "$TMPDIR/ans" \
+            || (echo "---" && python3 "./run.py") \
+        ) \
+    ) </dev/null >"$TMPDIR/out" 2>/dev/null
     RESULT=$?
 
     if ! [ "x$RESULT" = x0 ]; then

@@ -53,14 +53,17 @@ def safe_copy(obj):
     if obj is None:
         return None
 
-    if isinstance(obj, (int, str, bytes, bool)):
+    if isinstance(obj, (int, bool, float, complex, str, bytes)):
         return obj
+
+    if isinstance(obj, tuple):
+        return tuple(safe_copy(v) for v in obj)
 
     if isinstance(obj, list):
         return [safe_copy(v) for v in obj]
 
-    if isinstance(obj, tuple):
-        return tuple(safe_copy(v) for v in obj)
+    if isinstance(obj, (set, frozenset)):
+        return set(safe_copy(v) for v in obj)
 
     if isinstance(obj, dict):
         return {safe_copy(k): safe_copy(v) for k, v in obj.items()}
@@ -76,23 +79,28 @@ def describe(obj, depth=1):
     if obj is None:
         return "None"
 
-    if isinstance(obj, (int, str, bytes, bool)):
+    if isinstance(obj, (int, bool, float, complex, str, bytes)):
         return repr(obj)
-
-    if isinstance(obj, list):
-        return "["+", ".join([describe(o, depth) for o in obj])+"]"
 
     if isinstance(obj, tuple):
         if len(obj) == 1:
             return "(" + describe(obj[0], depth) + ",)"
         else:
-            return "("+", ".join([describe(o, depth) for o in obj])+")"
+            return "(" + ", ".join([describe(o, depth) for o in obj]) + ")"
+
+    if isinstance(obj, list):
+        return "[" + ", ".join([describe(o, depth) for o in obj]) + "]"
+
+    if isinstance(obj, (set, frozenset)):
+        return "set(" + ", ".join(sorted(
+            describe(o, depth) for o in obj
+        )) + ")"
 
     if isinstance(obj, dict):
-        return "{" + ", ".join(sorted([
+        return "{" + ", ".join(sorted(
             describe(k, depth) + ": " + describe(v, depth)
             for k, v in obj.items()
-        ])) + "}"
+        )) + "}"
 
     p = params.get(obj)
     if p is not None:
@@ -207,7 +215,7 @@ def unique_id(node):
 def inputs(node):
     result = set()
     def visit(obj):
-        if isinstance(obj, (list, tuple)):
+        if isinstance(obj, (tuple, list, set, frozenset)):
             [visit(o) for o in obj]
         if isinstance(obj, dict):
             [visit(o) for o in obj.keys()]
