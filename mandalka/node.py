@@ -48,6 +48,10 @@ class ByInstanceStorage:
         self.add = add
 
 params = ByInstanceStorage()
+node_class_by_obj = ByInstanceStorage()
+class_obj_by_name = {}
+node_obj_by_nodeid = {}
+global_lock = threading.Lock()
 
 def safe_copy(obj):
     if obj is None:
@@ -67,6 +71,12 @@ def safe_copy(obj):
 
     if isinstance(obj, dict):
         return {safe_copy(k): safe_copy(v) for k, v in obj.items()}
+
+    if isinstance(obj, type):
+        cls_name = node_class_by_obj.get(obj)
+        if cls_name is None:
+            raise ValueError("Type is not a node: " + str(obj))
+        return obj
 
     if params.get(obj) is not None:
         return obj
@@ -102,15 +112,21 @@ def describe(obj, depth=1):
             for k, v in obj.items()
         )) + "}"
 
+    if isinstance(obj, type):
+        cls_name = node_class_by_obj.get(obj)
+        if cls_name is None:
+            raise ValueError("Type is not a node: " + str(obj))
+        return "<class " + repr(cls_name) + ">"
+
     p = params.get(obj)
     if p is not None:
         if depth == 0:
-            return "<" + p["cls"].__name__ + " " + p["nodeid"] + ">"
+            return "<" + p["clsname"] + " " + p["nodeid"] + ">"
         else:
             args = [describe(o, depth-1) for o in p["args"]]
             for k in sorted(p["kwargs"]):
                 args.append(k + "=" + describe(p["kwargs"][k], depth-1))
-            return p["cls"].__name__ + "(" + ", ".join(args) + ")"
+            return p["clsname"] + "(" + ", ".join(args) + ")"
 
     raise ValueError("Invalid type: " + str(type(obj)))
 
@@ -123,47 +139,55 @@ def evaluate(node):
             p["initialized"] = True
             args = safe_copy(p["args"])
             kwargs = safe_copy(p["kwargs"])
+            cls = class_obj_by_name[p["clsname"]]
             try:
-                p["cls"].__init__(node, *args, **kwargs)
+                cls.__init__(node, *args, **kwargs)
             except:
                 p["error"] = True
                 raise
     return node
 
 def node(cls):
-    node_by_nodeid = {}
-    lock = threading.Lock()
+    with global_lock:
+        # Make sure class names are unique
+        cls_name = str(cls.__name__)
+        assert not cls_name in class_obj_by_name
+        class_obj_by_name[cls_name] = cls
 
     class Node(cls):
         def __new__(node_cls, *args, **kwargs):
             if node_cls != Node:
                 raise ValueError("Do not inherit from mandalka nodes")
 
-            nodeid = repr(cls.__name__)
+            # Build a full description of this constructor call
+            nodeid = repr(cls_name)
             for a in args:
                 nodeid += "|" + describe(a, 0)
             for k, v in kwargs.items():
                 nodeid += "|" + k + "=" + describe(v, 0)
             nodeid = str_hash(nodeid)
 
-            # Make sure the object is unique
-            with lock:
+            with global_lock:
+                # Make sure the object is unique
                 try:
-                    return node_by_nodeid[nodeid]
+                    return node_obj_by_nodeid[nodeid]
                 except KeyError:
-                    node = cls.__new__(node_cls)
-                    node_by_nodeid[nodeid] = node
+                    pass
 
-            # Store arguments to run cls.__init__() later
-            p = {}
-            p["cls"] = cls
-            p["args"] = safe_copy(args)
-            p["kwargs"] = safe_copy(kwargs)
-            p["nodeid"] = nodeid
-            p["lock"] = threading.RLock()
+                # It's really the first time
+                node = cls.__new__(node_cls)
+                node_obj_by_nodeid[nodeid] = node
 
-            params.add(node, p)
-            return node
+                # Store arguments to run cls.__init__() later
+                p = {}
+                p["clsname"] = cls_name
+                p["args"] = safe_copy(args)
+                p["kwargs"] = safe_copy(kwargs)
+                p["nodeid"] = nodeid
+                p["lock"] = threading.RLock()
+
+                params.add(node, p)
+                return node
 
         def __init__(self, *args, **kwargs):
             pass
@@ -179,10 +203,10 @@ def node(cls):
             return object.__getattribute__(self, name)
 
     def to_str(o):
-        return "<" + cls.__name__ + " " + params.get(o)["nodeid"] + ">"
+        return "<" + cls_name + " " + params.get(o)["nodeid"] + ">"
 
-    Node.__name__ = cls.__name__
-    Node.__qualname__ = cls.__name__
+    Node.__name__ = cls_name
+    Node.__qualname__ = cls_name
     Node.__str__ = to_str
     Node.__repr__ = to_str
 
@@ -203,6 +227,9 @@ def node(cls):
             if name in Node.__dict__:
                 continue
             setattr(Node, name, wrap(value))
+
+    with global_lock:
+        node_class_by_obj.add(Node, cls_name)
 
     return Node
 

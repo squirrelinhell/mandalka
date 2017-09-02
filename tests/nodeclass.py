@@ -19,7 +19,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-version = (2, 6)
+import mandalka
 
-from .node import node, is_node, unique_id, evaluate, describe, inputs
-from .threads import threads
+@mandalka.node
+class Foo:
+    def __init__(self, x):
+        self.x = x
+    def foo(self):
+        return self.x
+
+@mandalka.node
+class Factory:
+    def __init__(self, cls, *args, **kwargs):
+        self.cls = cls
+        self.args = args
+        self.kwargs = kwargs
+    def build(self):
+        return self.cls(*self.args, **self.kwargs)
+
+f = Factory(Foo, 10)
+print(mandalka.describe(f))
+
+f = f.build()
+print(mandalka.describe(f))
+
+assert f.foo() == 10
