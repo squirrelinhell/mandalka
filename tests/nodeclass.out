@@ -1,2 +1,4 @@
+<class 'Factory'>
+<class 'Factory'>
 Factory(<class 'Foo'>, 10)
 Foo(10)

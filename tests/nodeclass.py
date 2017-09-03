@@ -34,13 +34,14 @@ class Factory:
         self.cls = cls
         self.args = args
         self.kwargs = kwargs
-    def build(self):
+    def __call__(self):
         return self.cls(*self.args, **self.kwargs)
 
 f = Factory(Foo, 10)
-print(mandalka.describe(f))
+print(mandalka.describe(Factory))
+print(mandalka.describe(f.__class__))
 
-f = f.build()
 print(mandalka.describe(f))
+print(mandalka.describe(f()))
 
-assert f.foo() == 10
+assert f().foo() == 10

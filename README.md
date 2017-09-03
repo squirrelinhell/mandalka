@@ -56,7 +56,7 @@ print(model.weights)
 
 Arguments passed to constructors of nodes can only
 be made out of other nodes and basic Python types
-(such as `int`, `str`, `list`, `tuple`, `dict` etc.).
+(`int`, `str`, `list`, `tuple`, `dict` etc.).
 
 The uniqueness of mandalka nodes makes it possible
 to write code more similar to what one would expect from

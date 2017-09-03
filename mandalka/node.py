@@ -53,6 +53,16 @@ class_obj_by_name = {}
 node_obj_by_nodeid = {}
 global_lock = threading.Lock()
 
+global_config = {
+    "debug": False
+}
+
+def config(*args, debug=None):
+    assert len(args) == 0
+
+    if debug is not None:
+        global_config["debug"] = bool(debug)
+
 def safe_copy(obj):
     if obj is None:
         return None
@@ -190,7 +200,8 @@ def node(cls):
                 return node
 
         def __init__(self, *args, **kwargs):
-            pass
+            if global_config["debug"]:
+                evaluate(self)
 
         def __setattr__(self, name, value):
             evaluate(self)

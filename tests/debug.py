@@ -19,18 +19,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-version = (2, 7)
+import mandalka
 
-from .node import (
-    node,
-    is_node,
-    unique_id,
-    evaluate,
-    describe,
-    inputs,
-    config,
-)
+@mandalka.node
+class Test:
+    def __init__(self, x):
+        print(x)
 
-from .threads import (
-    threads,
-)
+t1 = Test(1)
+print("Print 1:")
+t1.access = "access"
+
+mandalka.config(debug=True)
+
+print("Print 2:")
+t2 = Test(2)
