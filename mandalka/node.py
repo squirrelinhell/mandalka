@@ -54,14 +54,14 @@ node_obj_by_nodeid = {}
 global_lock = threading.Lock()
 
 global_config = {
-    "debug": False
+    "lazy": True
 }
 
-def config(*args, debug=None):
+def config(*args, lazy=None):
     assert len(args) == 0
 
-    if debug is not None:
-        global_config["debug"] = bool(debug)
+    if lazy is not None:
+        global_config["lazy"] = bool(lazy)
 
 def safe_copy(obj):
     if obj is None:
@@ -200,7 +200,7 @@ def node(cls):
                 return node
 
         def __init__(self, *args, **kwargs):
-            if global_config["debug"]:
+            if not global_config["lazy"]:
                 evaluate(self)
 
         def __setattr__(self, name, value):

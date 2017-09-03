@@ -30,7 +30,7 @@ t1 = Test(1)
 print("Print 1:")
 t1.access = "access"
 
-mandalka.config(debug=True)
+mandalka.config(lazy=False)
 
 print("Print 2:")
 t2 = Test(2)
