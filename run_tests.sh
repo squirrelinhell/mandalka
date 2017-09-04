@@ -25,12 +25,18 @@ trap "rm -rf $TMPDIR" EXIT
 
 export PYTHONPATH="$(pwd):$PYTHONPATH"
 
+DEBUG_SETUP='
+import sys
+import IPython.core.ultratb
+sys.excepthook = IPython.core.ultratb.FormattedTB(call_pdb=True)
+'
+
 if [ "x$1" != x ]; then
+    export DEBUG=1
     TEST_FILE="$1"
     [ -f "$TEST_FILE" ] || TEST_FILE="tests/$TEST_FILE"
     [ -f "$TEST_FILE" ] || TEST_FILE="$TEST_FILE.py"
-    export DEBUG=1
-    echo "import debug" > "$TMPDIR/run.py"
+    echo "$DEBUG_SETUP" > "$TMPDIR/run.py"
     cat "$TEST_FILE" >> "$TMPDIR/run.py"
     (cd "$TMPDIR" && python3 "./run.py")
     exit $?
