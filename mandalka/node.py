@@ -20,6 +20,7 @@
 # SOFTWARE.
 
 import os
+import sys
 import hashlib
 import threading
 
@@ -47,12 +48,11 @@ class ByInstanceStorage:
         self.get = get
         self.add = add
 
-params = ByInstanceStorage()
-node_class_by_obj = ByInstanceStorage()
-class_obj_by_name = {}
-node_obj_by_nodeid = {}
 global_lock = threading.Lock()
 
+params = ByInstanceStorage()
+node_obj_by_nodeid = {}
+registered_classes = set()
 global_config = {
     "lazy": True
 }
@@ -60,8 +60,9 @@ global_config = {
 def config(*args, lazy=None):
     assert len(args) == 0
 
-    if lazy is not None:
-        global_config["lazy"] = bool(lazy)
+    with global_lock:
+        if lazy is not None:
+            global_config["lazy"] = bool(lazy)
 
 def safe_copy(obj):
     if obj is None:
@@ -82,16 +83,13 @@ def safe_copy(obj):
     if isinstance(obj, dict):
         return {safe_copy(k): safe_copy(v) for k, v in obj.items()}
 
-    if isinstance(obj, type):
-        cls_name = node_class_by_obj.get(obj)
-        if cls_name is None:
-            raise ValueError("Type is not a node: " + str(obj))
-        return obj
-
     if params.get(obj) is not None:
         return obj
 
-    raise ValueError("Invalid type: " + str(type(obj)))
+    if isinstance(obj, type):
+        raise ValueError("Invalid argument: " + str(obj))
+
+    raise ValueError("Invalid argument type: " + str(type(obj)))
 
 def describe(obj, depth=1):
     depth = int(depth)
@@ -122,12 +120,6 @@ def describe(obj, depth=1):
             for k, v in obj.items()
         )) + "}"
 
-    if isinstance(obj, type):
-        cls_name = node_class_by_obj.get(obj)
-        if cls_name is None:
-            raise ValueError("Type is not a node: " + str(obj))
-        return "<class " + repr(cls_name) + ">"
-
     p = params.get(obj)
     if p is not None:
         if depth == 0:
@@ -138,94 +130,104 @@ def describe(obj, depth=1):
                 args.append(k + "=" + describe(p["kwargs"][k], depth-1))
             return p["clsname"] + "(" + ", ".join(args) + ")"
 
-    raise ValueError("Invalid type: " + str(type(obj)))
+    if isinstance(obj, type):
+        raise ValueError("Invalid argument: " + str(obj))
+
+    raise ValueError("Invalid argument type: " + str(type(obj)))
 
 def evaluate(node):
     p = params.get(node)
     with p["lock"]:
         if "error" in p:
-            raise RuntimeError("%s.__init__() failed" % node)
+            raise p["error"]
         if "initialized" not in p:
             p["initialized"] = True
             args = safe_copy(p["args"])
             kwargs = safe_copy(p["kwargs"])
-            cls = class_obj_by_name[p["clsname"]]
             try:
-                cls.__init__(node, *args, **kwargs)
+                p["cls"].__init__(node, *args, **kwargs)
             except:
-                p["error"] = True
-                raise
+                p["error"] = RuntimeError(
+                    describe(node) + ": failed to run __init__"
+                )
+                raise p["error"]
     return node
+
+def wrap(f):
+    def wrapped_f(self, *args, **kwargs):
+        evaluate(self)
+        return f(self, *args, **kwargs)
+    return wrapped_f
 
 def node(cls):
     with global_lock:
-        # Make sure class names are unique
+        # Warn if class names are not unique
         cls_name = str(cls.__name__)
-        assert not cls_name in class_obj_by_name
-        class_obj_by_name[cls_name] = cls
+        if cls_name in registered_classes:
+            sys.stderr.write("Warning: class name '"
+                + cls_name + "' is already in use\n")
+        else:
+            registered_classes.add(cls_name)
 
     class Node(cls):
-        def __new__(node_cls, *args, **kwargs):
-            if node_cls != Node:
-                raise ValueError("Do not inherit from mandalka nodes")
+        pass
 
-            # Build a full description of this constructor call
-            nodeid = repr(cls_name)
-            for a in args:
-                nodeid += "|" + describe(a, 0)
-            for k, v in kwargs.items():
-                nodeid += "|" + k + "=" + describe(v, 0)
-            nodeid = str_hash(nodeid)
+    def node_new(node_cls, *args, **kwargs):
+        if node_cls != Node:
+            raise ValueError("Do not inherit from mandalka nodes")
 
-            with global_lock:
-                # Make sure the object is unique
-                try:
-                    return node_obj_by_nodeid[nodeid]
-                except KeyError:
-                    pass
+        # Build a full description of this constructor call
+        nodeid = repr(cls_name)
+        for a in args:
+            nodeid += "|" + describe(a, 0)
+        for k, v in kwargs.items():
+            nodeid += "|" + k + "=" + describe(v, 0)
+        nodeid = str_hash(nodeid)
 
-                # It's really the first time
-                node = cls.__new__(node_cls)
-                node_obj_by_nodeid[nodeid] = node
+        with global_lock:
+            # Make sure the object is unique
+            try:
+                return node_obj_by_nodeid[nodeid]
+            except KeyError:
+                pass
 
-                # Store arguments to run cls.__init__() later
-                p = {}
-                p["clsname"] = cls_name
-                p["args"] = safe_copy(args)
-                p["kwargs"] = safe_copy(kwargs)
-                p["nodeid"] = nodeid
-                p["lock"] = threading.RLock()
+            # It's really the first time
+            node = cls.__new__(node_cls)
+            node_obj_by_nodeid[nodeid] = node
 
-                params.add(node, p)
-                return node
+            # Store arguments to run cls.__init__() later
+            p = {}
+            p["cls"] = cls
+            p["clsname"] = cls_name
+            p["args"] = safe_copy(args)
+            p["kwargs"] = safe_copy(kwargs)
+            p["nodeid"] = nodeid
+            p["lock"] = threading.RLock()
 
-        def __init__(self, *args, **kwargs):
-            if not global_config["lazy"]:
-                evaluate(self)
+            params.add(node, p)
+            return node
 
-        def __setattr__(self, name, value):
+    def node_to_str(self):
+        return "<" + cls_name + " " + params.get(self)["nodeid"] + ">"
+
+    def node_getattr(self, name):
+        if name == "__class__":
+            return Node
+        evaluate(self)
+        return object.__getattribute__(self, name)
+
+    def node_init(self, *args, **kwargs):
+        if not global_config["lazy"]:
             evaluate(self)
-            return object.__setattr__(self, name, value)
 
-        def __getattribute__(self, name):
-            if name == "__class__":
-                return Node
-            evaluate(self)
-            return object.__getattribute__(self, name)
-
-    def to_str(o):
-        return "<" + cls_name + " " + params.get(o)["nodeid"] + ">"
-
+    Node.__getattribute__ = node_getattr
+    Node.__init__ = node_init
     Node.__name__ = cls_name
+    Node.__new__ = node_new
     Node.__qualname__ = cls_name
-    Node.__str__ = to_str
-    Node.__repr__ = to_str
-
-    def wrap(f):
-        def wrapped_f(self, *args, **kwargs):
-            evaluate(self)
-            return f(self, *args, **kwargs)
-        return wrapped_f
+    Node.__repr__ = node_to_str
+    Node.__setattr__ = wrap(object.__setattr__)
+    Node.__str__ = node_to_str
 
     for tpe in cls.__mro__:
         if tpe == object:
@@ -238,9 +240,6 @@ def node(cls):
             if name in Node.__dict__:
                 continue
             setattr(Node, name, wrap(value))
-
-    with global_lock:
-        node_class_by_obj.add(Node, cls_name)
 
     return Node
 

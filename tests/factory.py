@@ -29,19 +29,15 @@ class Foo:
         return self.x
 
 @mandalka.node
-class Factory:
-    def __init__(self, cls, *args, **kwargs):
-        self.cls = cls
+class FooFactory:
+    def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
     def __call__(self):
-        return self.cls(*self.args, **self.kwargs)
+        return Foo(*self.args, **self.kwargs)
 
-f = Factory(Foo, 10)
-print(mandalka.describe(Factory))
-print(mandalka.describe(f.__class__))
+Foo10 = FooFactory(10)
+print(mandalka.describe(Foo10))
+print(mandalka.describe(Foo10()))
 
-print(mandalka.describe(f))
-print(mandalka.describe(f()))
-
-assert f().foo() == 10
+assert Foo10().foo() == 10
