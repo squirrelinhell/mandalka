@@ -43,3 +43,12 @@ assert foo.a == 30
 
 assert mandalka.unique_id(foo) == "cf5448839e9bd525"
 assert str(foo) == "<Foo cf5448839e9bd525>"
+
+@mandalka.node
+class Foo:
+    def set_b(self, value):
+        self.b = value
+
+foo = Foo()
+foo.set_b(40)
+assert foo.b == 40

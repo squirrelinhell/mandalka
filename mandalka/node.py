@@ -167,6 +167,10 @@ def node(cls):
         if cls_name in registered_classes:
             sys.stderr.write("Warning: class name '"
                 + cls_name + "' is already in use\n")
+            i = 2
+            while cls_name + "_" + str(i) in registered_classes:
+                i += 1
+            cls_name = cls_name + "_" + str(i)
         else:
             registered_classes.add(cls_name)
 
