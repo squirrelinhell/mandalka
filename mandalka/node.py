@@ -138,19 +138,20 @@ def describe(obj, depth=1):
 def evaluate(node):
     p = params.get(node)
     with p["lock"]:
-        if "error" in p:
-            raise p["error"]
+        if ("error" in p) and p["error"]:
+            raise RuntimeError(
+                describe(node) + ": failed to run __init__"
+            )
         if "initialized" not in p:
             p["initialized"] = True
             args = safe_copy(p["args"])
             kwargs = safe_copy(p["kwargs"])
+            p["error"] = False
             try:
                 p["cls"].__init__(node, *args, **kwargs)
-            except:
-                p["error"] = RuntimeError(
-                    describe(node) + ": failed to run __init__"
-                )
-                raise p["error"]
+                p["error"] = True
+            finally:
+                p["error"] = not p["error"]
     return node
 
 def wrap(f):
