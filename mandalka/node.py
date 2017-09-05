@@ -171,8 +171,7 @@ def node(cls):
             while cls_name + "_" + str(i) in registered_classes:
                 i += 1
             cls_name = cls_name + "_" + str(i)
-        else:
-            registered_classes.add(cls_name)
+        registered_classes.add(cls_name)
 
     class Node(cls):
         pass
