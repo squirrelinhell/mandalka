@@ -154,6 +154,10 @@ def evaluate(node):
                 p["error"] = not p["error"]
     return node
 
+def lazy(f):
+    f.is_lazy = True
+    return f
+
 def wrap(f):
     def wrapped_f(self, *args, **kwargs):
         evaluate(self)
@@ -217,7 +221,13 @@ def node(cls):
     def node_getattr(self, name):
         if name == "__class__":
             return Node
-        evaluate(self)
+
+        # Don't run __init__ for methods tagged with mandalka.lazy
+        try:
+            getattr(Node, name).is_lazy
+        except AttributeError:
+            evaluate(self)
+
         return object.__getattribute__(self, name)
 
     def node_init(self, *args, **kwargs):

@@ -19,19 +19,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-version = (2, 13)
+import os
+import time
+import mandalka
 
-from .node import (
-    node,
-    is_node,
-    unique_id,
-    evaluate,
-    describe,
-    inputs,
-    config,
-    lazy,
-)
+@mandalka.node
+class Work:
+    def __init__(self):
+        print("Do some work")
 
-from .threads import (
-    threads,
-)
+    def work(self):
+        print("Continue work")
+
+    @mandalka.lazy
+    def access(self):
+        print("Start working now...")
+        self.work()
+
+Work().access()
