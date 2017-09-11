@@ -1,21 +1,21 @@
-<Node e0e08e91f627c6ad>
-Node(1, {2: [3, 4]})
-Node(1, {2: [3, 4]})
-<Node 8b51709e3dacb29d>
-Node(123, b=[])
-Node(123, b=[])
-<Node f4b93a350e044a22>
-Node({'a': 2, 'b': 1}, b=<Another 491465a316fdf989>)
-Node({'a': 2, 'b': 1}, b=Another({}))
-<Another c66ee6a7b28d272f>
-Another(a=['a', b'b'])
-Another(a=['a', b'b'])
-<Node 157b57137711dfd9>
-Node({'a': ['b'], 1: 2})
-Node({'a': ['b'], 1: 2})
-<Node d9444efb1eeb8e24>
-Node((3.14, (0.00159, 0.010000000000000002)))
-Node((3.14, (0.00159, 0.010000000000000002)))
-<Node a9542f2cc5542831>
-Node(set(1, 2, 3, 4, 5))
-Node(set(1, 2, 3, 4, 5))
+<Node 78661d64c9ad8231>
+Node(a=1, b={2: [3, 4]})
+Node(a=1, b={2: [3, 4]})
+<Node b26a869ea33505f2>
+Node(a=123, b=[])
+Node(a=123, b=[])
+<Node 089d7666a34a124f>
+Node(a={'a': 2, 'b': 1}, b=<Another 48ef642f7c9764a1>)
+Node(a={'a': 2, 'b': 1}, b=Another(a=None, b={}))
+<Another 4fe5e261bc01c268>
+Another(a=['a', b'b'], b=None)
+Another(a=['a', b'b'], b=None)
+<Node 4fefaebd4ac671ab>
+Node(a={'a': ['b'], 1: 2}, b=None)
+Node(a={'a': ['b'], 1: 2}, b=None)
+<Node 71859245cef293d6>
+Node(a=(3.14, (0.00159, 0.010000000000000002)), b=None)
+Node(a=(3.14, (0.00159, 0.010000000000000002)), b=None)
+<Node 45b6ddc86801d06e>
+Node(a=set(1, 2, 3, 4, 5), b=None)
+Node(a=set(1, 2, 3, 4, 5), b=None)

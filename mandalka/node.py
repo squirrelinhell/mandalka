@@ -21,6 +21,7 @@
 
 import os
 import sys
+import inspect
 import hashlib
 import threading
 
@@ -53,13 +54,12 @@ global_lock = threading.Lock()
 params = ByInstanceStorage()
 node_obj_by_nodeid = {}
 registered_classes = set()
+
 global_config = {
     "lazy": True
 }
 
-def config(*args, lazy=None):
-    assert len(args) == 0
-
+def config(*, lazy=None):
     with global_lock:
         if lazy is not None:
             global_config["lazy"] = bool(lazy)
@@ -148,7 +148,7 @@ def evaluate(node):
             kwargs = safe_copy(p["kwargs"])
             p["error"] = False
             try:
-                p["cls"].__init__(node, *args, **kwargs)
+                p["init"](node, *args, **kwargs)
                 p["error"] = True
             finally:
                 p["error"] = not p["error"]
@@ -163,6 +163,73 @@ def wrap(f):
         evaluate(self)
         return f(self, *args, **kwargs)
     return wrapped_f
+
+def argument_parser(method, method_name):
+    spec = inspect.getfullargspec(method)
+    if len(spec.args) < 1:
+        if spec.varargs is None:
+            raise TypeError("%s must accept an argument" % method_name)
+        arg_names = []
+    else:
+        arg_names = spec.args[1:]
+
+    if spec.defaults is None:
+        start_of_defaults = len(arg_names)
+    else:
+        defaults = safe_copy(spec.defaults)
+        start_of_defaults = len(arg_names) - len(defaults)
+
+    kw_defaults = {}
+    if spec.kwonlydefaults is not None:
+        kw_defaults = safe_copy(spec.kwonlydefaults)
+
+    def parse(*args, **kwargs):
+        args = list(args)
+
+        # Fill all arguments before '*'
+        for i, name in enumerate(arg_names):
+            if i < len(args):
+                pass
+            elif name in kwargs:
+                args.append(kwargs[name])
+                del kwargs[name]
+            elif i >= start_of_defaults:
+                args.append(defaults[i - start_of_defaults])
+            else:
+                raise TypeError("%s: missing argument '%s'"
+                    % (method_name, name))
+
+        # Verify received keyword-only arguments
+        for name in kwargs:
+            if name in arg_names:
+                raise TypeError("%s: duplicate argument '%s'"
+                    % (method_name, name))
+            if name not in spec.kwonlyargs and spec.varkw is None:
+                raise TypeError("%s: unknown argument '%s'"
+                    % (method_name, name))
+
+        if spec.varargs is None:
+            # Treat all arguments as named
+            if len(args) > len(arg_names):
+                raise TypeError("%s: too many unnamed arguments (+%d)"
+                    % (method_name, len(args) - len(arg_names)))
+            for name, value in zip(arg_names, args):
+                kwargs[name] = value
+            args = []
+
+        # Fill default values for keyword-only arguments
+        for name in spec.kwonlyargs:
+            if name in kwargs:
+                pass
+            elif name in kw_defaults:
+                kwargs[name] = kw_defaults[name]
+            else:
+                raise TypeError("%s: missing argument '%s'"
+                    % (method_name, name))
+
+        return safe_copy(args), safe_copy(kwargs)
+
+    return parse
 
 def node(cls):
     with global_lock:
@@ -180,16 +247,22 @@ def node(cls):
     class Node(cls):
         pass
 
+    init = cls.__init__
+    arg_parse = argument_parser(init, cls_name + ".__init__()")
+
     def node_new(node_cls, *args, **kwargs):
         if node_cls != Node:
             raise ValueError("Do not inherit from mandalka nodes")
+
+        # Standarize argument names etc.
+        args, kwargs = arg_parse(*args, **kwargs)
 
         # Build a full description of this constructor call
         nodeid = repr(cls_name)
         for a in args:
             nodeid += "|" + describe(a, 0)
-        for k, v in kwargs.items():
-            nodeid += "|" + k + "=" + describe(v, 0)
+        for k in sorted(kwargs):
+            nodeid += "|" + k + "=" + describe(kwargs[k], 0)
         nodeid = str_hash(nodeid)
 
         with global_lock:
@@ -205,10 +278,10 @@ def node(cls):
 
             # Store arguments to run cls.__init__() later
             p = {}
-            p["cls"] = cls
+            p["init"] = init
             p["clsname"] = cls_name
-            p["args"] = safe_copy(args)
-            p["kwargs"] = safe_copy(kwargs)
+            p["args"] = args
+            p["kwargs"] = kwargs
             p["nodeid"] = nodeid
             p["lock"] = threading.RLock()
 
@@ -262,6 +335,10 @@ def is_node(node):
 
 def unique_id(node):
     return params.get(node)["nodeid"]
+
+def argument(node, name):
+    p = params.get(node)
+    return safe_copy(p["kwargs"][name])
 
 def inputs(node):
     result = set()

@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-version = (2, 13)
+version = (2, 14)
 
 from .node import (
     node,
@@ -27,6 +27,7 @@ from .node import (
     unique_id,
     evaluate,
     describe,
+    argument,
     inputs,
     config,
     lazy,

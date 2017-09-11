@@ -1,2 +1,2 @@
 FooFactory(10)
-Foo(10)
+Foo(x=10)

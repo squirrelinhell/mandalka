@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from mandalka import node, is_node, describe
+from mandalka import node, evaluate, describe, argument
 
 def fails(f):
     try:
@@ -30,43 +30,44 @@ def fails(f):
 
 @node
 class Node:
-    def __init__(self, a=None, b=None):
-        self.a, self.b = a, b
+    def __init__(self, a=1, b=2):
+        pass
+
+assert Node() == Node(1, 2)
+assert Node(3) == Node(3, 2)
+assert Node(3) == Node(a=3)
+assert Node(a=4, b=5) == Node(4, 5)
+assert Node(1, b=7) == Node(b=7)
+assert fails(lambda: Node(c=1))
+assert fails(lambda: Node(1, a=1))
+assert describe(Node("a", "b")) == "Node(a='a', b='b')"
+
+assert argument(Node("x", "y"), "a") == "x"
+assert fails(lambda: argument(Node("x", "y"), "c"))
 
 @node
-class Another:
-    def __init__(self, b=None, a=None):
+class VarNode:
+    def __init__(self, a, *b, c=3):
+        print(a, b, c)
+
+assert VarNode(1, c=3) == VarNode(1)
+assert VarNode(a=1) == VarNode(1)
+assert fails(lambda: VarNode())
+assert describe(VarNode("a", "b")) == "VarNode('a', 'b', c=3)"
+
+evaluate(VarNode(1))
+evaluate(VarNode(1, 2))
+evaluate(VarNode(1, 2, 3))
+evaluate(VarNode(1, c=5))
+evaluate(VarNode(1, 2, c=5))
+evaluate(VarNode(1, 2, 3, c=5))
+
+@node
+class VarOnlyNode:
+    def __init__(self, a, *, b):
         pass
 
-class NotANode:
-    def __init__(self, a=None, b=None):
-        pass
-
-assert is_node(Node())
-assert not is_node(NotANode())
-
-assert fails(lambda: Node(NotANode(1, 2), 3))
-assert not fails(lambda: NotANode(Node(1, 2), 3))
-
-assert fails(lambda: Node(Node(NotANode(1, 2), 3)))
-assert not fails(lambda: Node(Node(Node(3, 4), Node(3))))
-
-modify_args = [1, {2: [3, 4]}]
-
-nodes = [
-    Node(*modify_args),
-    Node(123, b=[]),
-    Node({"b": 1, "a": 2}, b=Another({})),
-    Another(a=["a", b"b"]),
-    Node({1: 2, "a": ["b"]}),
-    Node((3.14, (0.00159, 0.1 * 0.1))),
-    Node(set([5, 2, 3, 4, 1]))
-]
-
-modify_args[1][2].append(5)
-assert repr(nodes[0].b) == "{2: [3, 4]}"
-
-for n in nodes:
-    print(describe(n, 0))
-    print(describe(n))
-    print(describe(n, 2))
+assert VarOnlyNode(a=1, b=2) == VarOnlyNode(1, b=2)
+assert fails(lambda: VarOnlyNode(1, 2))
+assert fails(lambda: VarOnlyNode(1, 2, b=2))
+assert describe(VarOnlyNode("a", b="b")) == "VarOnlyNode(a='a', b='b')"
