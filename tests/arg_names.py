@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from mandalka import node, evaluate, describe, argument
+from mandalka import node, evaluate, describe, arguments
 
 def fails(f):
     try:
@@ -42,8 +42,7 @@ assert fails(lambda: Node(c=1))
 assert fails(lambda: Node(1, a=1))
 assert describe(Node("a", "b")) == "Node(a='a', b='b')"
 
-assert argument(Node("x", "y"), "a") == "x"
-assert fails(lambda: argument(Node("x", "y"), "c"))
+assert arguments(Node("x", "y"))["a"] == "x"
 
 @node
 class VarNode:
@@ -61,6 +60,11 @@ evaluate(VarNode(1, 2, 3))
 evaluate(VarNode(1, c=5))
 evaluate(VarNode(1, 2, c=5))
 evaluate(VarNode(1, 2, 3, c=5))
+
+assert arguments(VarNode(5, 6, 7, c=8))[0] == 5
+assert arguments(VarNode(5, 6, 7, c=8))[1] == 6
+assert arguments(VarNode(5, 6, 7, c=8))[2] == 7
+assert arguments(VarNode(5, 6, 7, c=8))["c"] == 8
 
 @node
 class VarOnlyNode:

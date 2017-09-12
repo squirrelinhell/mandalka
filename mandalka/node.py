@@ -336,9 +336,12 @@ def is_node(node):
 def unique_id(node):
     return params.get(node)["nodeid"]
 
-def argument(node, name):
+def arguments(node):
     p = params.get(node)
-    return safe_copy(p["kwargs"][name])
+    all_args = safe_copy(p["kwargs"])
+    for i, value in enumerate(safe_copy(p["args"])):
+        all_args[i] = value
+    return all_args
 
 def inputs(node):
     result = set()
