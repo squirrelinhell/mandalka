@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from mandalka import node, evaluate, describe, arguments
+from mandalka import node, touch, describe, arguments
 
 def fails(f):
     try:
@@ -54,12 +54,12 @@ assert VarNode(a=1) == VarNode(1)
 assert fails(lambda: VarNode())
 assert describe(VarNode("a", "b")) == "VarNode('a', 'b', c=3)"
 
-evaluate(VarNode(1))
-evaluate(VarNode(1, 2))
-evaluate(VarNode(1, 2, 3))
-evaluate(VarNode(1, c=5))
-evaluate(VarNode(1, 2, c=5))
-evaluate(VarNode(1, 2, 3, c=5))
+touch(VarNode(1))
+touch(VarNode(1, 2))
+touch(VarNode(1, 2, 3))
+touch(VarNode(1, c=5))
+touch(VarNode(1, 2, c=5))
+touch(VarNode(1, 2, 3, c=5))
 
 assert arguments(VarNode(5, 6, 7, c=8))[0] == 5
 assert arguments(VarNode(5, 6, 7, c=8))[1] == 6

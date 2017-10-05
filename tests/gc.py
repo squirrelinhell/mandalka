@@ -19,22 +19,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import threading
+import mandalka
+import gc
 
-from .node import touch
+@mandalka.node(gc=True)
+class Test:
+    def __init__(self, n):
+        self.n = n
+        print("Creating node: %d" % n)
 
-def threads(*args):
-    if len(args) == 1:
-        try:
-            args[0].__iter__
-            args = args[0]
-        except AttributeError:
-            pass
+print("First:")
+a = Test(1)
+b = Test(1)
+a.x = 2
+assert id(a) == id(b)
+assert b.x == 2
 
-    threads = [
-        threading.Thread(target=touch, args=(o,))
-        for o in args
-    ]
-    [t.start() for t in threads]
-    [t.join() for t in threads]
-    return args
+del a, b
+gc.collect()
+
+print("Second:")
+a = Test(1)
+b = Test(1)
+a.x = 2
+assert id(a) == id(b)
+assert b.x == 2

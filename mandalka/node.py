@@ -41,8 +41,11 @@ class ByInstanceStorage:
                 return None
 
         def add(obj, value):
-            if value is not None:
-                obj_id = id(obj)
+            obj_id = id(obj)
+            if value is None:
+                assert obj_id in by_id
+                del by_id[obj_id]
+            else:
                 assert not obj_id in by_id
                 by_id[obj_id] = value
 
@@ -52,7 +55,6 @@ class ByInstanceStorage:
 global_lock = threading.Lock()
 
 params = ByInstanceStorage()
-node_obj_by_nodeid = {}
 registered_classes = set()
 
 global_config = {
@@ -135,7 +137,7 @@ def describe(obj, depth=1):
 
     raise ValueError("Invalid argument type: " + str(type(obj)))
 
-def evaluate(node):
+def touch(node):
     p = params.get(node)
     with p["lock"]:
         if ("error" in p) and p["error"]:
@@ -154,14 +156,24 @@ def evaluate(node):
                 p["error"] = not p["error"]
     return node
 
+def evaluate(node):
+    try:
+        touch(node)
+    finally:
+        p = params.get(node)
+        with p["lock"]:
+            del p["args"]
+            del p["kwargs"]
+
 def lazy(f):
     f.is_lazy = True
     return f
 
 def wrap(f):
     def wrapped_f(self, *args, **kwargs):
-        evaluate(self)
+        touch(self)
         return f(self, *args, **kwargs)
+
     return wrapped_f
 
 def argument_parser(method, method_name):
@@ -231,9 +243,12 @@ def argument_parser(method, method_name):
 
     return parse
 
-def node(cls):
+def node(cls=None, *, gc=False):
+    if cls is None:
+        return lambda cls: node(cls, gc=gc)
+
+    # Warn if class names are not unique
     with global_lock:
-        # Warn if class names are not unique
         cls_name = str(cls.__name__)
         if cls_name in registered_classes:
             sys.stderr.write("Warning: class name '"
@@ -244,9 +259,17 @@ def node(cls):
             cls_name = cls_name + "_" + str(i)
         registered_classes.add(cls_name)
 
+    # Use weak references if user requests garbage collection
+    if gc:
+        import weakref
+        node_obj_by_nodeid = weakref.WeakValueDictionary()
+    else:
+        node_obj_by_nodeid = {}
+
     class Node(cls):
         pass
 
+    # Build a common argument parser for all instances of this class
     init = cls.__init__
     arg_parse = argument_parser(init, cls_name + ".__init__()")
 
@@ -299,18 +322,22 @@ def node(cls):
         try:
             getattr(Node, name).is_lazy
         except AttributeError:
-            evaluate(self)
+            touch(self)
 
         return object.__getattribute__(self, name)
 
     def node_init(self, *args, **kwargs):
         if not global_config["lazy"]:
-            evaluate(self)
+            touch(self)
+
+    def node_del(self):
+        params.add(self, None)
 
     Node.__getattribute__ = node_getattr
     Node.__init__ = node_init
     Node.__name__ = cls_name
     Node.__new__ = node_new
+    Node.__del__ = node_del
     Node.__qualname__ = cls_name
     Node.__repr__ = node_to_str
     Node.__setattr__ = wrap(object.__setattr__)
@@ -338,6 +365,8 @@ def unique_id(node):
 
 def arguments(node):
     p = params.get(node)
+    if not "args" in p:
+        raise ValueError("Cannot access arguments after evaluate()")
     all_args = safe_copy(p["kwargs"])
     for i, value in enumerate(safe_copy(p["args"])):
         all_args[i] = value
@@ -354,6 +383,8 @@ def inputs(node):
         if params.get(obj) is not None:
             result.add(obj)
     p = params.get(node)
+    if not "args" in p:
+        raise ValueError("Cannot access inputs after evaluate()")
     [visit(o) for o in p["args"]]
     [visit(o) for o in p["kwargs"].values()]
     return result

@@ -19,22 +19,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import threading
+import mandalka
+import gc
 
-from .node import touch
+@mandalka.node(gc=True)
+class Increment:
+    def __init__(self, a):
+        if isinstance(a, int):
+            self.a = a + 1
+        else:
+            self.a = a.a + 1
+        print("Create: %s" % self.a)
+    def __del__(self):
+        print("Delete: %s" % self.a)
 
-def threads(*args):
-    if len(args) == 1:
-        try:
-            args[0].__iter__
-            args = args[0]
-        except AttributeError:
-            pass
+print("[nothing]")
+Increment(Increment(0))
+gc.collect()
 
-    threads = [
-        threading.Thread(target=touch, args=(o,))
-        for o in args
-    ]
-    [t.start() for t in threads]
-    [t.join() for t in threads]
-    return args
+print("[simple]")
+a = Increment(Increment(0))
+a.a
+a = Increment(0).a
+gc.collect()
+
+print("[evaluate]")
+a = Increment(Increment(0))
+mandalka.evaluate(a)
+a = Increment(0).a
+gc.collect()
